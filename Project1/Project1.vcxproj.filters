@@ -21,5 +21,8 @@
     <ClCompile Include="Hangman.cpp">
       <Filter>Header Files</Filter>
     </ClCompile>
+    <ClCompile Include="TV.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

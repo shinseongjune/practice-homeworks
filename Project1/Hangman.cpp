@@ -60,6 +60,6 @@ void hangmanTest() {
 	}
 }
 
-void main() {
-	hangmanTest();
-}
+//void main() {
+//	hangmanTest();
+//}
