@@ -1,4 +1,3 @@
 ﻿  ListTest.cpp
-C:\Users\sodau\source\repos\Project1\Project1\ListTest.cpp(210,13): warning C4326: return type of 'main' should be 'int' instead of 'void'
-C:\Users\sodau\source\repos\Project1\Project1\ListTest.cpp(122): warning C4172: returning address of local variable or temporary: it
+C:\Users\sodau\source\repos\Project1\Project1\ListTest.cpp(690,13): warning C4326: return type of 'main' should be 'int' instead of 'void'
   Project1.vcxproj -> C:\Users\sodau\source\repos\Project1\Debug\Project1.exe
