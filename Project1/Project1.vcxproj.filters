@@ -27,5 +27,14 @@
     <ClCompile Include="ListTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="InheritanceTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HierarchicalInheritance.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ShapeTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
