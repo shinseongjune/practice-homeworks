@@ -4,8 +4,8 @@
 #include <vector>
 #include <queue>
 
-#define WIDTH 300
-#define HEIGHT 300
+#define WIDTH 150
+#define HEIGHT 150
 #define WALL_RATE 47
 #define SMOOTHING_COUNT 4
 
@@ -56,6 +56,12 @@ public:
 	}
 };
 
+class Room {
+	list<Tile*> list;
+public:
+	bool isMainRoom;
+};
+
 class Map {
 	Map() {
 		for (int i = 0; i < WIDTH; i++) {
@@ -78,7 +84,6 @@ public:
 	}
 	
 	Tile*** grid = new Tile** [WIDTH];
-	vector<list<Tile*>> rooms;
 
 	bool IsInMapRange(int x, int y) {
 		return x >= 0 && y >= 0 && x < WIDTH && y < HEIGHT;
@@ -91,8 +96,7 @@ public:
 			SmoothingMap();
 		}
 
-		rooms = GetRooms();
-
+		vector<list<Tile*>*>* rooms = &GetRooms();
 	}
 
 	void MakeNoise() {
@@ -139,8 +143,67 @@ public:
 		return surroundingWallsCount;
 	}
 
-	vector<list<Tile*>> GetRooms() {
+	vector<list<Tile*>*>& GetRooms() {
+		vector<list<Tile*>*>* rooms = new vector<list<Tile*>*>;
+		int** flags = new int*[WIDTH];
+		for (int x = 0; x < WIDTH; x++) {
+			flags[x] = new int[HEIGHT];
+			for (int y = 0; y < HEIGHT; y++) {
+				flags[x][y] = 0;
+			}
+		}
 
+		for (int x = 0; x < WIDTH; x++) {
+			for (int y = 0; y < HEIGHT; y++) {
+				if (grid[x][y]->eType == Tile::Type::Ground) {
+					if (flags[x][y] != 1) {
+						flags[x][y] = 1;
+						list<Tile*>* room = GetRoom(x, y, flags);
+						rooms->push_back(room);
+					}
+				}
+			}
+		}
+
+		return *rooms;
+	}
+
+	list<Tile*>* GetRoom(int startX, int startY, int**& flags) {
+		list<Tile*>* room = new list<Tile*>;
+
+		queue<Tile*> checkNow;
+		queue<Tile*> checkNext;
+
+		checkNow.push(grid[startX][startY]);
+
+		while (!checkNow.empty()) {
+			Tile* t = checkNow.front();
+			checkNow.pop();
+
+			room->push_back(t);
+
+			int nowX = t->position->x;
+			int nowY = t->position->y;
+
+			for (int x = nowX - 1; x <= nowX + 1; x++) {
+				for (int y = nowY - 1; y <= nowY + 1; y++) {
+					if (IsInMapRange(x, y) && (x == nowX || y == nowY)) {
+						if (grid[x][y]->eType == Tile::Type::Ground) {
+							if (flags[x][y] != 1) {
+								flags[x][y] = 1;
+								checkNext.push(grid[x][y]);
+							}
+						}
+					}
+				}
+			}
+
+			if (checkNow.empty()) {
+				checkNow.swap(checkNext);
+			}
+		}
+
+		return room;
 	}
 
 	void DrawGrid() {
