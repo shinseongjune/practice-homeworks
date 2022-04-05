@@ -1,7 +1,3 @@
-﻿  ShapeTest.cpp
-C:\Users\sodau\source\repos\Project1\Project1\ShapeTest.cpp(106,8): error C2259: 'Shape': cannot instantiate abstract class
-C:\Users\sodau\source\repos\Project1\Project1\ShapeTest.cpp(19): message : see declaration of 'Shape'
-C:\Users\sodau\source\repos\Project1\Project1\ShapeTest.cpp(106,8): message : due to following members:
-C:\Users\sodau\source\repos\Project1\Project1\ShapeTest.cpp(106,8): message : 'Shape::~Shape(void)': is abstract
-C:\Users\sodau\source\repos\Project1\Project1\ShapeTest.cpp(24): message : see declaration of 'Shape::~Shape'
-C:\Users\sodau\source\repos\Project1\Project1\ShapeTest.cpp(109,13): warning C4326: return type of 'main' should be 'int' instead of 'void'
+﻿  RPGTest.cpp
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(97,13): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+  Project1.vcxproj -> C:\Users\sodau\source\repos\Project1\Debug\Project1.exe
