@@ -20,7 +20,7 @@ using namespace std;
 class MapObject;
 string slime = "　　　　　▩▩▩▩▩▩　　　　　　　\n　　　　▩　　　　　▩▩　　　　\n　　　▩　　　　　　　▩▩　　\n　　▩　　　　　　　　▩▩▩　\n　▩　　　　　　■　■　▩▩▩\n　▩　　　　　　■■　■▩▩　\n▩　　　　　　　　■　■▩▩▩\n▩　　　　　　　　■　■　▩▩\n▩　　　　　　　　　　　　▩▩\n▩　　　　　　　　　　　　▩▩\n▩▩　　　　　　　　　　　▩▩\n　▩▩▩▩▩▩▩▩▩▩▩▩▩　\n　▩▩▩▩▩　　　▩▩▩▩▩　\n";
 string skeleton = "　　　　　　▩▩▩▩▩▩▩　　　　　\n　　　　　▩　　　　　　　▩　　　　\n　　　　▩　　　　　　　　　▩　　　\n　　　▩　　　　　　　　　　　▩　　\n　　　▩　　▩▩　　　▩▩　　▩　　\n　　　　▩　▩▩　　　▩▩　▩　　　\n　　　▩　　　　　▩　　　　　▩　　\n　　　　▩▩▩　　　　　▩▩▩　　　\n　　　　　▩　▩　▩　▩　▩　　　　\n　　　　　▩▩　▩▩▩　▩▩　　　　\n　　　　　▩　　▩　▩　　▩　　　　\n　　　　　　▩　　　　　▩　　　　　\n　　　　　　　▩▩▩▩▩　　　　　　\n";
-string demonKing = "";
+string demonKing = "　　　▩　　　　　　　　　▩　　　\n　　　▩▩　　　　　　　▩▩　　　\n　　　▩▩▩　　　　　▩▩▩　　　\n　　　　▩▩　　　　　▩▩　　　　\n　　　　▩▩▩▩▩▩▩▩▩　　　　\n　　　　▩　　　　　　　▩　　　　\n　　　▩　▩　　　　　▩　▩　　　\n　　　▩　　▩　　　▩　　▩　　　\n　　　▩　　　　　　　　　▩　　　\n　　　▩　　　　▩　　　　▩　　　\n　　　▩　　　▩　▩　　　▩　　　\n　　　　▩　　　　　　　▩　　　　\n　　　　　▩▩▩▩▩▩▩　　　　　";
 
 int Sign(int value) {
 	return (value > 0) - (value < 0);
@@ -64,9 +64,7 @@ public:
 
 	Tile() : position(new Point), eType(Type::Ground) { }
 	Tile(int x, int y, Type eType) : position(new Point(x, y)), eType(eType) { }
-	~Tile() {
-		delete position;
-	}
+	~Tile() { }
 
 	bool IsAvailable() {
 		return (eType == Type::Ground) && occupier == nullptr;
@@ -86,16 +84,7 @@ class Map {
 	}
 	Map(Map& other) { }
 	Map& operator=(Map& other) { }
-	~Map() {
-		for (int i = 0; i < WIDTH; i++) {
-			delete[] grid[i];
-		}
-		delete[] grid;
-		for (int i = 0; i < rooms->size(); i++) {
-			delete rooms->at(i);
-		}
-		delete rooms;
-	}
+	~Map() { }
 public:
 	class Room {
 	public:
@@ -156,8 +145,6 @@ public:
 		//메인룸 연결 안된 방 연결
 
 
-		//delete rooms
-		//
 	}
 
 	void MakeNoise() {
@@ -226,9 +213,13 @@ public:
 			}
 		}
 		for (int x = 0; x < WIDTH; x++) {
-			delete[] flags[x];
+			if (flags[x] != nullptr) {
+				delete[] flags[x];
+			}
 		}
-		delete[] flags;
+		if (flags != nullptr) {
+			delete[] flags;
+		}
 
 		return *rooms;
 	}
@@ -331,7 +322,9 @@ public:
 		for (auto iter = line->begin(); iter != line->end(); iter++) {
 			MakeCircle(*iter);
 		}
-		delete line;
+		if (line != nullptr) {
+			delete line;
+		}
 	}
 
 	list<Point>*& GetLine(Tile t1, Tile t2) {
@@ -362,7 +355,7 @@ public:
 
 		int gradientAccumulation = longest / 2;
 		for (int i = 0; i < longest; i++) {
-			line->push_back(Point(x,y));
+			line->push_back(Point(x, y));
 
 			if (inverted) {
 				y += step;
@@ -428,6 +421,14 @@ public:
 	}
 };
 
+class Item : public MapObject {
+public:
+	Item(const char* name) {
+		this->name = name;
+		eType = Type::Item;
+	}
+};
+
 class Character : public MapObject {
 protected:
 	int HP;
@@ -437,10 +438,17 @@ protected:
 	int Str;
 	int Int;
 	int Def;
+
+	int Level;
+	int EXP;
+	int requiredEXP;
 public:
 	Character(const char* name, int hp, int mp, int str, int intel, int def) : HP(hp), MP(mp), maxHP(hp), maxMP(mp), Str(str), Int(intel), Def(def) {
 		this->name = name;
 		eType = Type::Enemy;
+		Level = 1;
+		EXP = 0;
+		requiredEXP = Level * 50;
 	}
 
 	void Damaged(int damage) {
@@ -484,6 +492,36 @@ public:
 
 	int GetDEF() {
 		return Def;
+	}
+
+	int GetLVL() {
+		return Level;
+	}
+
+	int GetEXP() {
+		return EXP;
+	}
+
+	void GainEXP(int exp) {
+		EXP += exp;
+		while (EXP >= requiredEXP) {
+			int remaining = EXP - requiredEXP;
+			LVLUp();
+			EXP = remaining;
+		}
+	}
+
+	int LVLUp() {
+		Level++;
+		maxHP += 10;
+		maxMP += 10;
+		HP = maxHP;
+		MP = maxMP;
+		Str += 5;
+		Int += 5;
+		Def += 2;
+		EXP = 0;
+		requiredEXP = Level * 50;
 	}
 };
 
@@ -564,7 +602,7 @@ public:
 				MoveEvent(Direction::S);
 			}
 			break;
-		//spacebar
+			//spacebar
 		case ' ':
 			if (SpacebarEvent != nullptr) {
 				SpacebarEvent();
@@ -606,7 +644,7 @@ public:
 		return _instance;
 	}
 
-	void DrawScreen();
+	string DrawScreen();
 
 	void DrawMonster(string& enemyName) {
 		if (enemyName == "슬라임") {
@@ -631,29 +669,22 @@ class GameManager {
 	GameManager();
 	GameManager(GameManager& other) { }
 	GameManager& operator=(GameManager& other) { }
-	~GameManager() {
-		delete player;
-		for (int i = 0; i < ENEMY_COUNT; i++) {
-			delete enemies[i];
-		}
-		delete[] enemies;
-		for (int i = 0; i < MAP_OBJECT_COUNT; i++) {
-			delete mapObjects[i];
-		}
-		delete[] mapObjects;
-	}
+	~GameManager() { }
 
 	clock_t pastTime = 0;
 	clock_t beforeTime = 0;
 	clock_t nextTime = 0;
 
-	const double CLOCKS_PER_FRAME = 1.0 / 30.0 * 1000;
-	
+	const double CLOCKS_PER_FRAME = 1.0 / 15.0 * 1000;
+
+	string screenBuffer;
+
 public:
 	Player* player = new Player("플레이어", 100, 50, 20, 15, 5);
 	Character* enemy = nullptr;
 	Character* enemies[20];
 	MapObject* mapObjects[20];
+	bool IsGameOver = false;
 
 	static GameManager& GetInstance() {
 		static GameManager _instance;
@@ -689,7 +720,7 @@ public:
 			}
 		}
 		for (int i = ENEMY_COUNT / 2; i < ENEMY_COUNT - 1; i++) {
-			enemies[i] = new Character("스켈레톤", 60, 0, 10, 0, 4);
+			enemies[i] = new Character("스켈레톤", 60, 0, 100, 0, 4);
 			while (true) {
 				x = rand() % WIDTH;
 				y = rand() % HEIGHT;
@@ -716,16 +747,23 @@ public:
 
 	void Play() {
 		while (true) {
+			if (IsGameOver) {
+				break;
+			}
 			nextTime = clock();
 			pastTime += nextTime - beforeTime;
 			beforeTime = nextTime;
 
 			if (pastTime >= CLOCKS_PER_FRAME) {
 				pastTime = 0;
-				system("cls");
 
 				InputManager::GetInstance().DoSomething();
-				Camera::GetInstance().DrawScreen();
+				string screen = Camera::GetInstance().DrawScreen();
+				if (screen != screenBuffer) {
+					system("cls");
+					cout << screen.c_str() << endl;
+					screenBuffer = screen;
+				}
 			}
 		}
 	}
@@ -758,7 +796,7 @@ protected:
 		InputManager::GetInstance().SetSpacebarEvent(Check);
 	}
 public:
-	ExploreState() { 
+	ExploreState() {
 		name = "ExploreState";
 	}
 	static void Moving(InputManager::Direction d);
@@ -813,6 +851,22 @@ public:
 	static void OK();
 };
 
+class GameOverState : public State {
+protected:
+	void AddListener() {
+		InputManager::GetInstance().SetMoveEvent(NoAction);
+		InputManager::GetInstance().SetSpacebarEvent(OK);
+	}
+public:
+	GameOverState() {
+		name = "GameOverState";
+	}
+	static void NoAction(InputManager::Direction d) {
+
+	}
+	static void OK();
+};
+
 class StateMachine {
 	StateMachine() {
 		State* es = new ExploreState;
@@ -820,7 +874,11 @@ class StateMachine {
 	}
 	StateMachine(StateMachine& other) { }
 	StateMachine& operator=(StateMachine& other) { }
-	~StateMachine() { }
+	~StateMachine() {
+		if (current != nullptr) {
+			delete current;
+		}
+	}
 
 	State* current = nullptr;
 public:
@@ -849,7 +907,7 @@ GameManager::GameManager() {
 	Camera::GetInstance();
 }
 
-void Camera::DrawScreen() {
+string Camera::DrawScreen() {
 	string nowState = StateMachine::GetInstance().GetCurrentStateName();
 	if (nowState == "ExploreState") {
 		screen.clear();
@@ -901,7 +959,7 @@ void Camera::DrawScreen() {
 		screen += "\n";
 
 		Player* p = GameManager::GetInstance().player;
-		screen += "[현재 상태] HP: " + to_string(p->GetHP()) + "/" + to_string(p->GetMaxHP());
+		screen += "[현재 상태](Lv." + to_string(p->GetLVL()) + ") HP: " + to_string(p->GetHP()) + "/" + to_string(p->GetMaxHP());
 		screen += " MP: " + to_string(p->GetMP()) + "/" + to_string(p->GetMaxMP());
 		screen += " STR: " + to_string(p->GetSTR());
 		screen += " INT: " + to_string(p->GetINT());
@@ -914,7 +972,6 @@ void Camera::DrawScreen() {
 		for (auto iter = nearObjects.begin(); iter != nearObjects.end(); iter++) {
 			screen += (*iter)->GetName() + " ";
 		}
-		cout << screen.c_str() << endl;
 	}
 	else if (nowState == "BattleState") {
 		Character* enemy = GameManager::GetInstance().enemy;
@@ -925,7 +982,6 @@ void Camera::DrawScreen() {
 		screen += "[" + enemyName + "] HP: " + to_string(enemy->GetHP()) + "/" + to_string(enemy->GetMaxHP());
 		screen += "\n";
 		screen += "SpaceBar: 공격";
-		cout << screen.c_str() << endl;
 	}
 	else if (nowState == "AttackingState") {
 		Player* player = GameManager::GetInstance().player;
@@ -942,7 +998,6 @@ void Camera::DrawScreen() {
 			screen += enemyName + "이(가) 쓰러졌다!\n";
 		}
 		screen += "SpaceBar: 확인";
-		cout << screen.c_str() << endl;
 	}
 	else if (nowState == "DefensingState") {
 		Player* player = GameManager::GetInstance().player;
@@ -959,8 +1014,20 @@ void Camera::DrawScreen() {
 			screen += "패배했다...\n";
 		}
 		screen += "SpaceBar: 확인";
-		cout << screen.c_str() << endl;
 	}
+	else if (nowState == "GameOverState") {
+		screen.clear();
+		screen += "================================\n";
+		screen += "================================\n";
+		screen += "================================\n";
+		screen += "================================\n";
+		screen += "==========[Game Over]===========\n";
+		screen += "================================\n";
+		screen += "================================\n";
+		screen += "================================\n";
+		screen += "================================\n";
+	}
+	return screen;
 }
 
 void ExploreState::Moving(InputManager::Direction d) {
@@ -1045,7 +1112,7 @@ void BattleState::SpaceBar() {
 	if (enemy->IsDead()) {
 
 	}
-	else if (player->IsDead()){
+	else if (player->IsDead()) {
 
 	}
 	else {
@@ -1082,12 +1149,17 @@ void AttackingState::OK() {
 void DefensingState::OK() {
 	Player* player = GameManager::GetInstance().player;
 	if (player->IsDead()) {
-		//패배스테이트
+		State* gs = new GameOverState;
+		StateMachine::GetInstance().Transition(*gs);
 	}
 	else {
 		State* bs = new BattleState;
 		StateMachine::GetInstance().Transition(*bs);
 	}
+}
+
+void GameOverState::OK() {
+	GameManager::GetInstance().IsGameOver = true;
 }
 
 int main() {
@@ -1096,4 +1168,6 @@ int main() {
 
 	return 0;
 }
+
+
 
