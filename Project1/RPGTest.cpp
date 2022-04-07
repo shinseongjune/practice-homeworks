@@ -355,25 +355,25 @@ public:
 
 		int gradientAccumulation = longest / 2;
 		for (int i = 0; i < longest; i++) {
-			line->push_back(Point(x, y));
+line->push_back(Point(x, y));
 
-			if (inverted) {
-				y += step;
-			}
-			else {
-				x += step;
-			}
+if (inverted) {
+	y += step;
+}
+else {
+	x += step;
+}
 
-			gradientAccumulation += shortest;
-			if (gradientAccumulation >= longest) {
-				if (inverted) {
-					x += gradientStep;
-				}
-				else {
-					y += gradientStep;
-				}
-				gradientAccumulation -= longest;
-			}
+gradientAccumulation += shortest;
+if (gradientAccumulation >= longest) {
+	if (inverted) {
+		x += gradientStep;
+	}
+	else {
+		y += gradientStep;
+	}
+	gradientAccumulation -= longest;
+}
 		}
 
 		return line;
@@ -392,6 +392,99 @@ public:
 				}
 			}
 		}
+	}
+};
+
+class StatModifier {
+public:
+	enum Type {
+		BaseFlat,
+		BaseMult,
+		TotalFlat,
+		TotalMult
+	};
+	string Name;
+	float Value;
+	MapObject* Setter = nullptr;
+	Type eType;
+	StatModifier(const char* name, float value, MapObject* setter, Type type) : Name(name), Value(value), Setter(setter), eType(type) { }
+	int GetOrder() {
+		return (int)eType;
+	}
+	bool operator==(StatModifier& other) {
+		return (Name == other.Name && Setter == other.Setter);
+	}
+	bool operator==(StatModifier* other) {
+		return (Name == other->Name && Setter == other->Setter);
+	}
+};
+
+class Stat {
+	bool isDirty = true;
+	float nowValue = 0;
+	vector<StatModifier> modifiers;
+	
+public:
+	float BaseValue = 0;
+	float ValuePerLevel = 0;
+
+	Stat(float base, float vpl) : BaseValue(base), ValuePerLevel(vpl) { }
+
+	int GetValue() {
+		if (isDirty) {
+			nowValue = BaseValue;
+			for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
+				switch ((*iter).eType) {
+				case StatModifier::Type::BaseFlat:
+				case StatModifier::Type::TotalFlat:
+					nowValue += (*iter).Value;
+					break;
+				case StatModifier::Type::BaseMult:
+				case StatModifier::Type::TotalMult:
+					nowValue *= (*iter).BaseMult;
+					break;
+				}
+			}
+			isDirty = false;
+		}
+		return nowValue;
+	}
+
+	vector<StatModifier> GetModifiersVector() {
+		return modifiers;
+	}
+
+	void SetModifier(StatModifier& mod) {
+		string name = mod.Name;
+		for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
+			if ((*iter).Name == name) {
+				return;
+			}
+		}
+		modifiers.push_back(mod);
+		sort(modifiers.begin(), modifiers.end(), ([](StatModifier a, StatModifier b) {
+			return a.GetOrder() > b.GetOrder();
+		}));
+		isDirty = true;
+	}
+
+	void RemoveModifiersBySetter(MapObject* setter) {
+		for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
+			if (iter->Setter == setter) {
+				auto tempIter = iter;
+				iter++;
+				modifiers.erase(tempIter);
+				if (iter != modifiers.begin()) {
+					iter--;
+				}
+				isDirty = true;
+			}
+		}
+	}
+
+	void LevelUp() {
+		BaseValue += ValuePerLevel;
+		isDirty = true;
 	}
 };
 
@@ -433,17 +526,17 @@ class Character : public MapObject {
 protected:
 	int HP;
 	int MP;
-	int maxHP;
-	int maxMP;
-	int Str;
-	int Int;
-	int Def;
+	Stat maxHP;
+	Stat maxMP;
+	Stat Str;
+	Stat Int;
+	Stat Def;
 
 	int Level;
 	int EXP;
 	int requiredEXP;
 public:
-	Character(const char* name, int hp, int mp, int str, int intel, int def) : HP(hp), MP(mp), maxHP(hp), maxMP(mp), Str(str), Int(intel), Def(def) {
+	Character(const char* name, float hp, float mp, float str, float intel, float def, float hppl = 0, float mppl = 0, float strpl = 0, float intpl = 0, float defpl = 0) : HP(hp), MP(mp), maxHP(hp, hppl), maxMP(mp, mppl), Str(str, strpl), Int(intel, intpl), Def(def, defpl) {
 		this->name = name;
 		eType = Type::Enemy;
 		Level = 1;
@@ -452,14 +545,14 @@ public:
 	}
 
 	void Damaged(int damage) {
-		HP -= damage - Def;
+		HP -= max(damage - Def.GetValue(), 0);
 		if (HP < 0) {
 			HP = 0;
 		}
 	}
 
 	void Attack(Character& target) {
-		target.Damaged(Str);
+		target.Damaged(Str.GetValue());
 	}
 
 	bool IsDead() {
@@ -475,23 +568,23 @@ public:
 	}
 
 	int GetMaxHP() {
-		return maxHP;
+		return maxHP.GetValue();
 	}
 
 	int GetMaxMP() {
-		return maxMP;
+		return maxMP.GetValue();
 	}
 
 	int GetSTR() {
-		return Str;
+		return Str.GetValue();
 	}
 
 	int GetINT() {
-		return Int;
+		return Int.GetValue();
 	}
 
 	int GetDEF() {
-		return Def;
+		return Def.GetValue();
 	}
 
 	int GetLVL() {
@@ -511,15 +604,15 @@ public:
 		}
 	}
 
-	int LVLUp() {
+	void LVLUp() {
 		Level++;
-		maxHP += 10;
-		maxMP += 10;
-		HP = maxHP;
-		MP = maxMP;
-		Str += 5;
-		Int += 5;
-		Def += 2;
+		maxHP.LevelUp();
+		maxMP.LevelUp();
+		HP = maxHP.GetValue();
+		MP = maxMP.GetValue();
+		Str.LevelUp();
+		Int.LevelUp();
+		Def.LevelUp();
 		EXP = 0;
 		requiredEXP = Level * 50;
 	}
@@ -528,7 +621,7 @@ public:
 class Player : public Character {
 	list<MapObject*> nearObjects;
 public:
-	Player(const char* name, int hp, int mp, int str, int intel, int def) : Character(name, hp, mp, str, intel, def) {
+	Player(const char* name, int hp, int mp, int str, int intel, int def, float hppl, float mppl, float strpl, float intpl, float defpl) : Character(name, hp, mp, str, intel, def, hppl, mppl, strpl, intpl, defpl) {
 		eType = Type::Player;
 	}
 
@@ -680,7 +773,7 @@ class GameManager {
 	string screenBuffer;
 
 public:
-	Player* player = new Player("플레이어", 100, 50, 20, 15, 5);
+	Player* player = new Player("플레이어", 100, 50, 20, 15, 5, 10, 10, 5, 5, 5);
 	Character* enemy = nullptr;
 	Character* enemies[20];
 	MapObject* mapObjects[20];
@@ -703,10 +796,8 @@ public:
 				break;
 			}
 		}
-		Camera::GetInstance().rig.x = x > 16 ? x : 16;
-		Camera::GetInstance().rig.x = x < WIDTH - 16 ? x : WIDTH - 16;
-		Camera::GetInstance().rig.y = y > 16 ? y : 16;
-		Camera::GetInstance().rig.y = y < HEIGHT - 16 ? y : HEIGHT - 16;
+		Camera::GetInstance().rig.x = x <= 15 ? 16 : x >= WIDTH - 15 ? WIDTH - 15 : x;
+		Camera::GetInstance().rig.y = y <= 15 ? 16 : y >= HEIGHT - 15 ? HEIGHT - 15 : y;
 		for (int i = 0; i < ENEMY_COUNT / 2; i++) {
 			enemies[i] = new Character("슬라임", 30, 0, 5, 0, 1);
 			while (true) {
@@ -720,7 +811,7 @@ public:
 			}
 		}
 		for (int i = ENEMY_COUNT / 2; i < ENEMY_COUNT - 1; i++) {
-			enemies[i] = new Character("스켈레톤", 60, 0, 100, 0, 4);
+			enemies[i] = new Character("스켈레톤", 60, 0, 15, 0, 4);
 			while (true) {
 				x = rand() % WIDTH;
 				y = rand() % HEIGHT;
@@ -912,13 +1003,13 @@ string Camera::DrawScreen() {
 	if (nowState == "ExploreState") {
 		screen.clear();
 		screen += "▨";
-		for (int i = 0; i < 30; i++) {
+		for (int i = 0; i < 31; i++) {
 			screen += "▤";
 		}
 		screen += "▧\n";
-		for (int x = rig.x - 15; x < rig.x + 15; x++) {
+		for (int x = rig.x - 16; x < rig.x + 15; x++) {
 			screen += "▥";
-			for (int y = rig.y - 15; y < rig.y + 15; y++) {
+			for (int y = rig.y - 16; y < rig.y + 15; y++) {
 				if (!Map::GetInstance().IsInMapRange(x, y)) {
 					continue;
 				}
@@ -951,7 +1042,7 @@ string Camera::DrawScreen() {
 			screen += "▥\n";
 		}
 		screen += "▧";
-		for (int i = 0; i < 30; i++) {
+		for (int i = 0; i < 31; i++) {
 			screen += "▤";
 		}
 		screen += "▨\n";
@@ -1043,9 +1134,6 @@ void ExploreState::Moving(InputManager::Direction d) {
 			GameManager::GetInstance().player->SetPosition(x - 1, y);
 			Map::GetInstance().grid[x][y]->occupier = nullptr;
 			Map::GetInstance().grid[x - 1][y]->occupier = GameManager::GetInstance().player;
-			if (x > 14 && x < WIDTH - 15) {
-				Camera::GetInstance().rig.x -= 1;
-			}
 		}
 		break;
 	case InputManager::Direction::E:
@@ -1056,9 +1144,6 @@ void ExploreState::Moving(InputManager::Direction d) {
 			GameManager::GetInstance().player->SetPosition(x, y + 1);
 			Map::GetInstance().grid[x][y]->occupier = nullptr;
 			Map::GetInstance().grid[x][y + 1]->occupier = GameManager::GetInstance().player;
-			if (y > 15 && y < HEIGHT - 14) {
-				Camera::GetInstance().rig.y += 1;
-			}
 		}
 		break;
 	case InputManager::Direction::W:
@@ -1069,9 +1154,6 @@ void ExploreState::Moving(InputManager::Direction d) {
 			GameManager::GetInstance().player->SetPosition(x, y - 1);
 			Map::GetInstance().grid[x][y]->occupier = nullptr;
 			Map::GetInstance().grid[x][y - 1]->occupier = GameManager::GetInstance().player;
-			if (y > 14 && y < HEIGHT - 15) {
-				Camera::GetInstance().rig.y -= 1;
-			}
 		}
 		break;
 	case InputManager::Direction::S:
@@ -1082,12 +1164,14 @@ void ExploreState::Moving(InputManager::Direction d) {
 			GameManager::GetInstance().player->SetPosition(x + 1, y);
 			Map::GetInstance().grid[x][y]->occupier = nullptr;
 			Map::GetInstance().grid[x + 1][y]->occupier = GameManager::GetInstance().player;
-			if (x > 15 && x < WIDTH - 14) {
-				Camera::GetInstance().rig.x += 1;
-			}
 		}
 		break;
 	}
+	nowPosition = GameManager::GetInstance().player->GetPosition();
+	x = nowPosition.x;
+	y = nowPosition.y;
+	Camera::GetInstance().rig.x = x <= 15 ? 16 : x >= WIDTH - 15 ? WIDTH - 15 : x;
+	Camera::GetInstance().rig.y = y <= 15 ? 16 : y >= HEIGHT - 15 ? HEIGHT - 15 : y;
 }
 
 void ExploreState::Check() {
@@ -1128,6 +1212,7 @@ void AttackingState::OK() {
 	Player* player = GameManager::GetInstance().player;
 	Character* enemy = GameManager::GetInstance().enemy;
 	if (enemy->IsDead()) {
+		player->GainEXP(enemy->GetMaxHP());
 		int x = enemy->GetPosition().x;
 		int y = enemy->GetPosition().y;
 		Map::GetInstance().grid[x][y]->occupier = nullptr;
