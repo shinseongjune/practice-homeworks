@@ -1,8 +1,10 @@
 ﻿  RPGTest.cpp
 C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(134,21): warning C4018: '<': signed/unsigned mismatch
 C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(151,13): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(692,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(708,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1342,34): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(698,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(714,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(737,18): warning C4018: '>=': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1262,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1417,34): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
 C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(379): warning C4172: returning address of local variable or temporary: line
   Project1.vcxproj -> C:\Users\sodau\source\repos\Project1\Debug\Project1.exe

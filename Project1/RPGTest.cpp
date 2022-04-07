@@ -520,9 +520,9 @@ public:
 		Sub,
 		__Count
 	};
-	
-	Equippable* equipped;
-	Character* owner;
+
+	Equippable* equipped = nullptr;
+	Type eType = Type::Weapon;
 };
 
 class MapObject {
@@ -586,7 +586,7 @@ public:
 	Stat stats[Stat::Type::__Count];
 	ItemSlot slots[ItemSlot::Type::__Count];
 	vector<MapObject*> inventory;
-	
+
 	Character(const char* name, float hp, float mp, float str, float intel, float def, float hppl = 0, float mppl = 0, float strpl = 0, float intpl = 0, float defpl = 0) : HP(hp), MP(mp) {
 		this->name = name;
 		stats[Stat::Type::MaxHP].BaseValue = hp;
@@ -601,7 +601,7 @@ public:
 		stats[Stat::Type::Defense].ValuePerLevel = defpl;
 
 		for (int i = 0; i < ItemSlot::Type::__Count; i++) {
-			slots[i].owner = this;
+			slots[i].eType = (ItemSlot::Type)i;
 		}
 
 		eType = Type::Enemy;
@@ -734,6 +734,9 @@ public:
 		}
 	}
 	void UseItem(int i) {
+		if (i < 0 || i >= inventory.size()) {
+			return;
+		}
 		if (inventory[i]->GetType() == MapObject::Type::Equippable) {
 			Equip((::Equippable*)inventory[i]);
 			return;
@@ -827,6 +830,7 @@ public:
 				SpacebarEvent();
 			}
 			break;
+		case '0':
 		case '1':
 		case '2':
 		case '3':
@@ -836,9 +840,8 @@ public:
 		case '7':
 		case '8':
 		case '9':
-		case '0':
 			if (NumberEvent != nullptr) {
-				NumberEvent(downKey);
+				NumberEvent(downKey - '0');
 			}
 			break;
 		}
@@ -905,7 +908,7 @@ public:
 
 class GameManager {
 	const int ENEMY_COUNT = 20;
-	const int MAP_OBJECT_COUNT = 20;
+	const int MAP_OBJECT_COUNT = 10;
 
 	GameManager();
 	GameManager(GameManager& other) { }
@@ -924,7 +927,7 @@ public:
 	Player* player = new Player("플레이어", 100, 50, 20, 15, 5, 10, 10, 5, 5, 5);
 	Character* enemy = nullptr;
 	Character* enemies[20];
-	MapObject* mapObjects[20];
+	MapObject* mapObjects[10];
 	bool IsGameOver = false;
 
 	static GameManager& GetInstance() {
@@ -978,6 +981,20 @@ public:
 				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
 					enemies[i]->SetPosition(x, y);
 					Map::GetInstance().grid[x][y]->occupier = enemies[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 0; i < MAP_OBJECT_COUNT; i++) {
+			//TODO: 아이템 성능 추가하고 생성자 변경.
+			mapObjects[i] = new Equippable("대검", ItemSlot::Type::Weapon);
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
 					break;
 				}
 			}
@@ -1043,7 +1060,7 @@ public:
 	static void Moving(InputManager::Direction d);
 	static void Check();
 	static void UseItem(int i) {
-
+		GameManager::GetInstance().player->UseItem(i);
 	}
 };
 
@@ -1134,11 +1151,7 @@ class StateMachine {
 	}
 	StateMachine(StateMachine& other) { }
 	StateMachine& operator=(StateMachine& other) { }
-	~StateMachine() {
-		if (current != nullptr) {
-			delete current;
-		}
-	}
+	~StateMachine() { }
 
 	State* current = nullptr;
 public:
@@ -1196,6 +1209,9 @@ string Camera::DrawScreen() {
 					else if (occupierName == "마왕") {
 						screen += "＠";
 					}
+					else if (occupierName == "대검") {
+						screen += "†";
+					}
 				}
 				else {
 					switch (Map::GetInstance().grid[x][y]->eType) {
@@ -1225,8 +1241,28 @@ string Camera::DrawScreen() {
 		screen += " INT: " + to_string((int)p->GetINT());
 		screen += " DEF: " + to_string((int)p->GetDEF());
 		screen += "\n";
-		screen += "[장비] testA, testB, testC, testD\n";
-		screen += "[인벤토리] testA, testB, testC, testD\n";
+		
+		screen += "[장비]";
+		screen += " 머리 : ";
+		screen += p->slots[ItemSlot::Type::Head].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Head].equipped->GetName();
+		screen += " 몸 : ";
+		screen += p->slots[ItemSlot::Type::Body].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Body].equipped->GetName();
+		screen += " 팔 : ";
+		screen += p->slots[ItemSlot::Type::Arm].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Arm].equipped->GetName();
+		screen += " 다리 : ";
+		screen += p->slots[ItemSlot::Type::Leg].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Leg].equipped->GetName();
+		screen += " 무기 : ";
+		screen += p->slots[ItemSlot::Type::Weapon].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Weapon].equipped->GetName();
+		screen += " 보조장비 : ";
+		screen += p->slots[ItemSlot::Type::Sub].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Sub].equipped->GetName();
+		screen += "\n";
+		
+		screen += "[인벤토리] ";
+		screen += "\n";
+		for (int i = 0; i < p->inventory.size(); i++) {
+			screen += to_string(i) + " : " + p->inventory[i]->GetName() + " ";
+		}
+		screen += "\n";
 		screen += "[인접한 것] ";
 		list<MapObject*> nearObjects = p->GetNearObjects();
 		for (auto iter = nearObjects.begin(); iter != nearObjects.end(); iter++) {
@@ -1250,7 +1286,7 @@ string Camera::DrawScreen() {
 		DrawMonster(enemyName);
 
 		screen += "\n";
-		screen += enemyName + "에게 공격을 했다! 피해를 " + to_string((int)(player->GetSTR() - enemy->GetDEF())) + " 줬다.";
+		screen += enemyName + "에게 공격을 했다! 피해를 " + to_string(max(0, (int)(player->GetSTR() - enemy->GetDEF()))) + " 줬다.";
 		screen += "\n";
 		screen += enemyName + "의 HP가 " + to_string((int)enemy->GetHP()) + "이(가) 되었다.";
 		screen += "\n";
@@ -1266,7 +1302,7 @@ string Camera::DrawScreen() {
 		DrawMonster(enemyName);
 
 		screen += "\n";
-		screen += enemyName + "의 공격! 피해를 " + to_string((int)(enemy->GetSTR() - player->GetDEF())) + " 받았다.";
+		screen += enemyName + "의 공격! 피해를 " + to_string(max(0, (int)(enemy->GetSTR() - player->GetDEF()))) + " 받았다.";
 		screen += "\n";
 		screen += "플레이어의 HP가 " + to_string((int)player->GetHP()) + "이(가) 되었다.";
 		screen += "\n";
@@ -1353,8 +1389,14 @@ void ExploreState::Check() {
 		State* bs = new BattleState;
 		StateMachine::GetInstance().Transition(*bs);
 	}
-	else {
+	else if (nearObjects.front()->GetType() == MapObject::Type::Equippable || nearObjects.front()->GetType() == MapObject::Type::Consumable) {
+		MapObject* item = nearObjects.front();
+		GameManager::GetInstance().player->GetItem(item);
 
+		int x = item->GetPosition().x;
+		int y = item->GetPosition().y;
+		item->SetPosition(-1, -1);
+		Map::GetInstance().grid[x][y]->occupier = nullptr;
 	}
 
 }
@@ -1362,19 +1404,10 @@ void ExploreState::Check() {
 void BattleState::SpaceBarEvent() {
 	Player* player = GameManager::GetInstance().player;
 	Character* enemy = GameManager::GetInstance().enemy;
-	if (enemy->IsDead()) {
+	player->Attack(*enemy);
 
-	}
-	else if (player->IsDead()) {
-
-	}
-	else {
-		player->Attack(*enemy);
-
-		State* as = new AttackingState;
-		StateMachine::GetInstance().Transition(*as);
-
-	}
+	State* as = new AttackingState;
+	StateMachine::GetInstance().Transition(*as);
 }
 
 void AttackingState::OK() {
@@ -1422,6 +1455,7 @@ int main() {
 
 	return 0;
 }
+
 
 
 
