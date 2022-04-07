@@ -355,25 +355,25 @@ public:
 
 		int gradientAccumulation = longest / 2;
 		for (int i = 0; i < longest; i++) {
-line->push_back(Point(x, y));
+			line->push_back(Point(x, y));
 
-if (inverted) {
-	y += step;
-}
-else {
-	x += step;
-}
+			if (inverted) {
+				y += step;
+			}
+			else {
+				x += step;
+			}
 
-gradientAccumulation += shortest;
-if (gradientAccumulation >= longest) {
-	if (inverted) {
-		x += gradientStep;
-	}
-	else {
-		y += gradientStep;
-	}
-	gradientAccumulation -= longest;
-}
+			gradientAccumulation += shortest;
+			if (gradientAccumulation >= longest) {
+				if (inverted) {
+					x += gradientStep;
+				}
+				else {
+					y += gradientStep;
+				}
+				gradientAccumulation -= longest;
+			}
 		}
 
 		return line;
@@ -395,6 +395,43 @@ if (gradientAccumulation >= longest) {
 	}
 };
 
+class StatModifier;
+
+class Stat {
+	bool isDirty = true;
+	float nowValue = 0;
+	vector<StatModifier> modifiers;
+
+public:
+	enum Type {
+		MaxHP,
+		MaxMP,
+		Strength,
+		Intelligence,
+		Defense,
+		__Count
+	};
+	float BaseValue = 0;
+	float ValuePerLevel = 0;
+
+	Stat(float base = 0, float vpl = 0) : BaseValue(base), ValuePerLevel(vpl) { }
+
+	float GetValue();
+
+	vector<StatModifier> GetModifiersVector() {
+		return modifiers;
+	}
+
+	void SetModifier(StatModifier mod);
+
+	void RemoveModifiersBySetter(MapObject* setter);
+
+	void LevelUp() {
+		BaseValue += ValuePerLevel;
+		isDirty = true;
+	}
+};
+
 class StatModifier {
 public:
 	enum Type {
@@ -407,7 +444,9 @@ public:
 	float Value;
 	MapObject* Setter = nullptr;
 	Type eType;
-	StatModifier(const char* name, float value, MapObject* setter, Type type) : Name(name), Value(value), Setter(setter), eType(type) { }
+	Stat::Type statType;
+
+	StatModifier(const char* name, float value, MapObject* setter, Type type, Stat::Type sType) : Name(name), Value(value), Setter(setter), eType(type), statType(sType) { }
 	int GetOrder() {
 		return (int)eType;
 	}
@@ -419,86 +458,85 @@ public:
 	}
 };
 
-class Stat {
-	bool isDirty = true;
-	float nowValue = 0;
-	vector<StatModifier> modifiers;
-	
-public:
-	float BaseValue = 0;
-	float ValuePerLevel = 0;
-
-	Stat(float base, float vpl) : BaseValue(base), ValuePerLevel(vpl) { }
-
-	int GetValue() {
-		if (isDirty) {
-			nowValue = BaseValue;
-			for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
-				switch ((*iter).eType) {
-				case StatModifier::Type::BaseFlat:
-				case StatModifier::Type::TotalFlat:
-					nowValue += (*iter).Value;
-					break;
-				case StatModifier::Type::BaseMult:
-				case StatModifier::Type::TotalMult:
-					nowValue *= (*iter).BaseMult;
-					break;
-				}
-			}
-			isDirty = false;
-		}
-		return nowValue;
-	}
-
-	vector<StatModifier> GetModifiersVector() {
-		return modifiers;
-	}
-
-	void SetModifier(StatModifier& mod) {
-		string name = mod.Name;
+float Stat::GetValue() {
+	if (isDirty) {
+		nowValue = BaseValue;
 		for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
-			if ((*iter).Name == name) {
-				return;
+			switch ((*iter).eType) {
+			case StatModifier::Type::BaseFlat:
+			case StatModifier::Type::TotalFlat:
+				nowValue += (*iter).Value;
+				break;
+			case StatModifier::Type::BaseMult:
+			case StatModifier::Type::TotalMult:
+				nowValue *= (*iter).BaseMult;
+				break;
 			}
 		}
-		modifiers.push_back(mod);
-		sort(modifiers.begin(), modifiers.end(), ([](StatModifier a, StatModifier b) {
-			return a.GetOrder() > b.GetOrder();
+		isDirty = false;
+	}
+	return nowValue;
+}
+
+void Stat::SetModifier(StatModifier mod) {
+	string name = mod.Name;
+	for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
+		if ((*iter).Name == name) {
+			return;
+		}
+	}
+	modifiers.push_back(mod);
+	sort(modifiers.begin(), modifiers.end(), ([](StatModifier a, StatModifier b) {
+		return a.GetOrder() > b.GetOrder();
 		}));
-		isDirty = true;
-	}
+	isDirty = true;
+}
 
-	void RemoveModifiersBySetter(MapObject* setter) {
-		for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
-			if (iter->Setter == setter) {
-				auto tempIter = iter;
-				iter++;
-				modifiers.erase(tempIter);
-				if (iter != modifiers.begin()) {
-					iter--;
-				}
-				isDirty = true;
+void Stat::RemoveModifiersBySetter(MapObject* setter) {
+	for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
+		if (iter->Setter == setter) {
+			auto tempIter = iter;
+			iter++;
+			modifiers.erase(tempIter);
+			if (iter != modifiers.begin()) {
+				iter--;
 			}
+			isDirty = true;
 		}
 	}
+}
 
-	void LevelUp() {
-		BaseValue += ValuePerLevel;
-		isDirty = true;
-	}
+class Equippable;
+class Character;
+
+class ItemSlot {
+public:
+	enum Type {
+		Head,
+		Body,
+		Arm,
+		Leg,
+		Weapon,
+		Sub,
+		__Count
+	};
+	
+	Equippable* equipped;
+	Character* owner;
 };
 
 class MapObject {
 public:
 	enum Type {
-		Item,
+		Equippable,
+		Consumable,
 		Enemy,
 		Player
 	};
 protected:
 	string name;
 	Point position;
-	Type eType = Type::Item;
+	Type eType = Type::Equippable;
 public:
 	string GetName() {
 		return name;
@@ -514,77 +552,109 @@ public:
 	}
 };
 
-class Item : public MapObject {
+class Equippable : public MapObject {
 public:
-	Item(const char* name) {
+	struct ItemOption {
+		Stat::Type statType;
+		StatModifier::Type modType;
+		float value;
+	};
+
+	ItemSlot::Type slotType;
+	vector<ItemOption> options;
+
+	Equippable(const char* name, ItemSlot::Type slotType) : slotType(slotType) {
 		this->name = name;
-		eType = Type::Item;
+		eType = Type::Equippable;
 	}
+};
+
+class Consumable : public MapObject {
+public:
+
 };
 
 class Character : public MapObject {
 protected:
-	int HP;
-	int MP;
-	Stat maxHP;
-	Stat maxMP;
-	Stat Str;
-	Stat Int;
-	Stat Def;
+	float HP;
+	float MP;
 
 	int Level;
 	int EXP;
 	int requiredEXP;
 public:
-	Character(const char* name, float hp, float mp, float str, float intel, float def, float hppl = 0, float mppl = 0, float strpl = 0, float intpl = 0, float defpl = 0) : HP(hp), MP(mp), maxHP(hp, hppl), maxMP(mp, mppl), Str(str, strpl), Int(intel, intpl), Def(def, defpl) {
+	Stat stats[Stat::Type::__Count];
+	ItemSlot slots[ItemSlot::Type::__Count];
+	vector<MapObject*> inventory;
+	
+	Character(const char* name, float hp, float mp, float str, float intel, float def, float hppl = 0, float mppl = 0, float strpl = 0, float intpl = 0, float defpl = 0) : HP(hp), MP(mp) {
 		this->name = name;
+		stats[Stat::Type::MaxHP].BaseValue = hp;
+		stats[Stat::Type::MaxHP].ValuePerLevel = hppl;
+		stats[Stat::Type::MaxMP].BaseValue = mp;
+		stats[Stat::Type::MaxMP].ValuePerLevel = mppl;
+		stats[Stat::Type::Strength].BaseValue = str;
+		stats[Stat::Type::Strength].ValuePerLevel = strpl;
+		stats[Stat::Type::Intelligence].BaseValue = intel;
+		stats[Stat::Type::Intelligence].ValuePerLevel = intpl;
+		stats[Stat::Type::Defense].BaseValue = def;
+		stats[Stat::Type::Defense].ValuePerLevel = defpl;
+
+		for (int i = 0; i < ItemSlot::Type::__Count; i++) {
+			slots[i].owner = this;
+		}
+
 		eType = Type::Enemy;
 		Level = 1;
 		EXP = 0;
 		requiredEXP = Level * 50;
 	}
 
-	void Damaged(int damage) {
-		HP -= max(damage - Def.GetValue(), 0);
+	void Damaged(float damage) {
+		HP -= max(damage - stats[Stat::Type::Defense].GetValue(), 0);
 		if (HP < 0) {
 			HP = 0;
 		}
 	}
 
+	void healed(float heal) {
+		HP = min(HP + heal, stats[Stat::Type::MaxHP].GetValue());
+	}
+
 	void Attack(Character& target) {
-		target.Damaged(Str.GetValue());
+		target.Damaged(stats[Stat::Type::Strength].GetValue());
 	}
 
 	bool IsDead() {
 		return HP <= 0;
 	}
 
-	int GetHP() {
+	float GetHP() {
 		return HP;
 	}
 
-	int GetMP() {
+	float GetMP() {
 		return MP;
 	}
 
-	int GetMaxHP() {
-		return maxHP.GetValue();
+	float GetMaxHP() {
+		return stats[Stat::Type::MaxHP].GetValue();
 	}
 
-	int GetMaxMP() {
-		return maxMP.GetValue();
+	float GetMaxMP() {
+		return stats[Stat::Type::MaxMP].GetValue();
 	}
 
-	int GetSTR() {
-		return Str.GetValue();
+	float GetSTR() {
+		return stats[Stat::Type::Strength].GetValue();
 	}
 
-	int GetINT() {
-		return Int.GetValue();
+	float GetINT() {
+		return stats[Stat::Type::Intelligence].GetValue();
 	}
 
-	int GetDEF() {
-		return Def.GetValue();
+	float GetDEF() {
+		return stats[Stat::Type::Defense].GetValue();
 	}
 
 	int GetLVL() {
@@ -606,22 +676,76 @@ public:
 
 	void LVLUp() {
 		Level++;
-		maxHP.LevelUp();
-		maxMP.LevelUp();
-		HP = maxHP.GetValue();
-		MP = maxMP.GetValue();
-		Str.LevelUp();
-		Int.LevelUp();
-		Def.LevelUp();
+		stats[Stat::Type::MaxHP].LevelUp();
+		stats[Stat::Type::MaxMP].LevelUp();
+		HP = stats[Stat::Type::MaxHP].GetValue();
+		MP = stats[Stat::Type::MaxMP].GetValue();
+		stats[Stat::Type::Strength].LevelUp();
+		stats[Stat::Type::Intelligence].LevelUp();
+		stats[Stat::Type::Defense].LevelUp();
 		EXP = 0;
 		requiredEXP = Level * 50;
+	}
+
+	void Unequip(ItemSlot::Type type) {
+		if (slots[type].equipped == nullptr) {
+			return;
+		}
+		::Equippable* item = slots[type].equipped;
+
+		vector<Equippable::ItemOption> options = item->options;
+
+		for (int i = 0; i < options.size(); i++) {
+			Stat::Type statType = options[i].statType;
+			stats[statType].RemoveModifiersBySetter(item);
+		}
+
+		inventory.push_back(item);
+		slots[type].equipped = nullptr;
+	}
+
+	void Equip(::Equippable* item) {
+		ItemSlot::Type slotType = item->slotType;
+		if (slots[slotType].equipped != nullptr) {
+			Unequip(slotType);
+		}
+
+		vector<Equippable::ItemOption> options = item->options;
+		for (int i = 0; i < options.size(); i++) {
+			Equippable::ItemOption option = options[i];
+			StatModifier mod((item->GetName().c_str()), option.value, item, option.modType, option.statType);
+			stats[option.statType].SetModifier(mod);
+		}
+
+		slots[slotType].equipped = item;
+		RemoveItem(item);
+	}
+
+	void GetItem(MapObject* item) {
+		inventory.push_back(item);
+	}
+
+	void RemoveItem(MapObject* item) {
+		for (auto iter = inventory.begin(); iter != inventory.end(); iter++) {
+			if (*iter == item) {
+				inventory.erase(iter);
+				break;
+			}
+		}
+	}
+	void UseItem(int i) {
+		if (inventory[i]->GetType() == MapObject::Type::Equippable) {
+			Equip((::Equippable*)inventory[i]);
+			return;
+		}
+
 	}
 };
 
 class Player : public Character {
 	list<MapObject*> nearObjects;
 public:
-	Player(const char* name, int hp, int mp, int str, int intel, int def, float hppl, float mppl, float strpl, float intpl, float defpl) : Character(name, hp, mp, str, intel, def, hppl, mppl, strpl, intpl, defpl) {
+	Player(const char* name, float hp, float mp, float str, float intel, float def, float hppl, float mppl, float strpl, float intpl, float defpl) : Character(name, hp, mp, str, intel, def, hppl, mppl, strpl, intpl, defpl) {
 		eType = Type::Player;
 	}
 
@@ -662,6 +786,7 @@ private:
 	}
 	void (*MoveEvent)(Direction d) = nullptr;
 	void (*SpacebarEvent)() = nullptr;
+	void (*NumberEvent)(int i) = nullptr;
 public:
 
 	static InputManager& GetInstance() {
@@ -670,7 +795,8 @@ public:
 	}
 
 	void DoSomething() {
-		switch (GetKey()) {
+		int downKey = GetKey();
+		switch (downKey) {
 		case 'w':
 		case 'W':
 			if (MoveEvent != nullptr) {
@@ -701,6 +827,20 @@ public:
 				SpacebarEvent();
 			}
 			break;
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+		case '0':
+			if (NumberEvent != nullptr) {
+				NumberEvent(downKey);
+			}
+			break;
 		}
 	}
 
@@ -712,12 +852,20 @@ public:
 		SpacebarEvent = event;
 	}
 
+	void SetNumberEvent(void (*event)(int)) {
+		NumberEvent = event;
+	}
+
 	void RemoveMoveEvent() {
 		MoveEvent = nullptr;
 	}
 
 	void RemoveSpacebarEvent() {
 		SpacebarEvent = nullptr;
+	}
+
+	void RemoveNumberEvent() {
+		NumberEvent = nullptr;
 	}
 };
 
@@ -867,6 +1015,7 @@ protected:
 	void RemoveListener() {
 		InputManager::GetInstance().RemoveMoveEvent();
 		InputManager::GetInstance().RemoveSpacebarEvent();
+		InputManager::GetInstance().RemoveNumberEvent();
 	}
 public:
 	void OnEnter() {
@@ -885,6 +1034,7 @@ protected:
 	void AddListener() {
 		InputManager::GetInstance().SetMoveEvent(Moving);
 		InputManager::GetInstance().SetSpacebarEvent(Check);
+		InputManager::GetInstance().SetNumberEvent(UseItem);
 	}
 public:
 	ExploreState() {
@@ -892,13 +1042,17 @@ public:
 	}
 	static void Moving(InputManager::Direction d);
 	static void Check();
+	static void UseItem(int i) {
+
+	}
 };
 
 class BattleState : public State {
 protected:
 	void AddListener() {
 		InputManager::GetInstance().SetMoveEvent(SelectAction);
-		InputManager::GetInstance().SetSpacebarEvent(SpaceBar);
+		InputManager::GetInstance().SetSpacebarEvent(SpaceBarEvent);
+		InputManager::GetInstance().SetNumberEvent(NumberEvent);
 	}
 public:
 	BattleState() {
@@ -907,7 +1061,10 @@ public:
 	static void SelectAction(InputManager::Direction d) {
 
 	}
-	static void SpaceBar();
+	static void SpaceBarEvent();
+	static void NumberEvent(int i) {
+
+	}
 };
 
 class AttackingState : public State {
@@ -915,6 +1072,7 @@ protected:
 	void AddListener() {
 		InputManager::GetInstance().SetMoveEvent(NoAction);
 		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NumberEvent);
 	}
 public:
 	AttackingState() {
@@ -924,6 +1082,9 @@ public:
 
 	}
 	static void OK();
+	static void NumberEvent(int i) {
+
+	}
 };
 
 class DefensingState : public State {
@@ -931,6 +1092,7 @@ protected:
 	void AddListener() {
 		InputManager::GetInstance().SetMoveEvent(NoAction);
 		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NumberEvent);
 	}
 public:
 	DefensingState() {
@@ -940,6 +1102,9 @@ public:
 
 	}
 	static void OK();
+	static void NumberEvent(int i) {
+
+	}
 };
 
 class GameOverState : public State {
@@ -947,6 +1112,7 @@ protected:
 	void AddListener() {
 		InputManager::GetInstance().SetMoveEvent(NoAction);
 		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NumberEvent);
 	}
 public:
 	GameOverState() {
@@ -956,6 +1122,9 @@ public:
 
 	}
 	static void OK();
+	static void NumberEvent(int i) {
+
+	}
 };
 
 class StateMachine {
@@ -1050,11 +1219,11 @@ string Camera::DrawScreen() {
 		screen += "\n";
 
 		Player* p = GameManager::GetInstance().player;
-		screen += "[현재 상태](Lv." + to_string(p->GetLVL()) + ") HP: " + to_string(p->GetHP()) + "/" + to_string(p->GetMaxHP());
-		screen += " MP: " + to_string(p->GetMP()) + "/" + to_string(p->GetMaxMP());
-		screen += " STR: " + to_string(p->GetSTR());
-		screen += " INT: " + to_string(p->GetINT());
-		screen += " DEF: " + to_string(p->GetDEF());
+		screen += "[현재 상태](Lv." + to_string((int)p->GetLVL()) + ") HP: " + to_string((int)p->GetHP()) + "/" + to_string((int)p->GetMaxHP());
+		screen += " MP: " + to_string((int)p->GetMP()) + "/" + to_string((int)p->GetMaxMP());
+		screen += " STR: " + to_string((int)p->GetSTR());
+		screen += " INT: " + to_string((int)p->GetINT());
+		screen += " DEF: " + to_string((int)p->GetDEF());
 		screen += "\n";
 		screen += "[장비] testA, testB, testC, testD\n";
 		screen += "[인벤토리] testA, testB, testC, testD\n";
@@ -1070,7 +1239,7 @@ string Camera::DrawScreen() {
 		DrawMonster(enemyName);
 
 		screen += "\n";
-		screen += "[" + enemyName + "] HP: " + to_string(enemy->GetHP()) + "/" + to_string(enemy->GetMaxHP());
+		screen += "[" + enemyName + "] HP: " + to_string((int)enemy->GetHP()) + "/" + to_string((int)enemy->GetMaxHP());
 		screen += "\n";
 		screen += "SpaceBar: 공격";
 	}
@@ -1081,9 +1250,9 @@ string Camera::DrawScreen() {
 		DrawMonster(enemyName);
 
 		screen += "\n";
-		screen += enemyName + "에게 공격을 했다! 피해를 " + to_string(player->GetSTR() - enemy->GetDEF()) + " 줬다.";
+		screen += enemyName + "에게 공격을 했다! 피해를 " + to_string((int)(player->GetSTR() - enemy->GetDEF())) + " 줬다.";
 		screen += "\n";
-		screen += enemyName + "의 HP가 " + to_string(enemy->GetHP()) + "이(가) 되었다.";
+		screen += enemyName + "의 HP가 " + to_string((int)enemy->GetHP()) + "이(가) 되었다.";
 		screen += "\n";
 		if (enemy->IsDead()) {
 			screen += enemyName + "이(가) 쓰러졌다!\n";
@@ -1097,9 +1266,9 @@ string Camera::DrawScreen() {
 		DrawMonster(enemyName);
 
 		screen += "\n";
-		screen += enemyName + "의 공격! 피해를 " + to_string(enemy->GetSTR() - player->GetDEF()) + " 받았다.";
+		screen += enemyName + "의 공격! 피해를 " + to_string((int)(enemy->GetSTR() - player->GetDEF())) + " 받았다.";
 		screen += "\n";
-		screen += "플레이어의 HP가 " + to_string(player->GetHP()) + "이(가) 되었다.";
+		screen += "플레이어의 HP가 " + to_string((int)player->GetHP()) + "이(가) 되었다.";
 		screen += "\n";
 		if (player->IsDead()) {
 			screen += "패배했다...\n";
@@ -1190,7 +1359,7 @@ void ExploreState::Check() {
 
 }
 
-void BattleState::SpaceBar() {
+void BattleState::SpaceBarEvent() {
 	Player* player = GameManager::GetInstance().player;
 	Character* enemy = GameManager::GetInstance().enemy;
 	if (enemy->IsDead()) {
