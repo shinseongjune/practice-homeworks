@@ -1,10 +1,14 @@
 ﻿  RPGTest.cpp
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(134,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(151,13): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(698,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(714,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(737,18): warning C4018: '>=': signed/unsigned mismatch
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1262,21): warning C4018: '<': signed/unsigned mismatch
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1417,34): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
-C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(379): warning C4172: returning address of local variable or temporary: line
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(160,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(177,13): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(424,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(766,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(789,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(819,18): warning C4018: '>=': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(862,18): warning C4018: '>=': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1168,1): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1202,1): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1618,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(1720,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\sodau\source\repos\Project1\Project1\RPGTest.cpp(405): warning C4172: returning address of local variable or temporary: line
   Project1.vcxproj -> C:\Users\sodau\source\repos\Project1\Debug\Project1.exe

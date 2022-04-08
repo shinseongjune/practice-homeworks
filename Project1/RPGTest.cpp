@@ -8,6 +8,7 @@
 #include <conio.h>
 #include <time.h>
 #include <string>
+#include <algorithm>
 
 #define WIDTH 70
 #define HEIGHT 70
@@ -20,7 +21,8 @@ using namespace std;
 class MapObject;
 string slime = "　　　　　▩▩▩▩▩▩　　　　　　　\n　　　　▩　　　　　▩▩　　　　\n　　　▩　　　　　　　▩▩　　\n　　▩　　　　　　　　▩▩▩　\n　▩　　　　　　■　■　▩▩▩\n　▩　　　　　　■■　■▩▩　\n▩　　　　　　　　■　■▩▩▩\n▩　　　　　　　　■　■　▩▩\n▩　　　　　　　　　　　　▩▩\n▩　　　　　　　　　　　　▩▩\n▩▩　　　　　　　　　　　▩▩\n　▩▩▩▩▩▩▩▩▩▩▩▩▩　\n　▩▩▩▩▩　　　▩▩▩▩▩　\n";
 string skeleton = "　　　　　　▩▩▩▩▩▩▩　　　　　\n　　　　　▩　　　　　　　▩　　　　\n　　　　▩　　　　　　　　　▩　　　\n　　　▩　　　　　　　　　　　▩　　\n　　　▩　　▩▩　　　▩▩　　▩　　\n　　　　▩　▩▩　　　▩▩　▩　　　\n　　　▩　　　　　▩　　　　　▩　　\n　　　　▩▩▩　　　　　▩▩▩　　　\n　　　　　▩　▩　▩　▩　▩　　　　\n　　　　　▩▩　▩▩▩　▩▩　　　　\n　　　　　▩　　▩　▩　　▩　　　　\n　　　　　　▩　　　　　▩　　　　　\n　　　　　　　▩▩▩▩▩　　　　　　\n";
-string demonKing = "　　　▩　　　　　　　　　▩　　　\n　　　▩▩　　　　　　　▩▩　　　\n　　　▩▩▩　　　　　▩▩▩　　　\n　　　　▩▩　　　　　▩▩　　　　\n　　　　▩▩▩▩▩▩▩▩▩　　　　\n　　　　▩　　　　　　　▩　　　　\n　　　▩　▩　　　　　▩　▩　　　\n　　　▩　　▩　　　▩　　▩　　　\n　　　▩　　　　　　　　　▩　　　\n　　　▩　　　　▩　　　　▩　　　\n　　　▩　　　▩　▩　　　▩　　　\n　　　　▩　　　　　　　▩　　　　\n　　　　　▩▩▩▩▩▩▩　　　　　";
+string demonKing = "　　　▩　　　　　　　　　▩　　　\n　　　▩▩　　　　　　　▩▩　　　\n　　　▩▩▩　　　　　▩▩▩　　　\n　　　　▩▩　　　　　▩▩　　　　\n　　　　▩▩▩▩▩▩▩▩▩　　　　\n　　　　▩　　　　　　　▩　　　　\n　　　▩　▩　　　　　▩　▩　　　\n　　　▩　　▩　　　▩　　▩　　　\n　　　▩　　　　　　　　　▩　　　\n　　　▩　　　　▩　　　　▩　　　\n　　　▩　　　▩　▩　　　▩　　　\n　　　　▩　　　　　　　▩　　　　\n　　　　　▩▩▩▩▩▩▩　　　　　\n";
+string town = "　　　▩　　　　　　　　　\n　　　▩　　　　　　　　　　　　　　\n　　▩▩▩　　　　　　　　　　　　　\n　　　▩　　　　　　　　　　　　　　\n　　▩▩▩▩▩　　　　　　　　　　　\n　▩　　　▩▩▩▩　　　　　　　　　\n　▩　　　▩　　▩▩　　▩　　　　　\n　▩　　　▩　　▩▩　▩　▩　　　　\n　　▩　　▩▩▩▩　▩　　　▩　　　\n▩▩▩　　　　▩▩▩▩▩▩▩▩▩▩▩\n　　▩▩▩　　　　　　　　　　▩　▩\n　　　　　▩　　　　　　　　　　　▩\n　　　　　▩▩▩▩▩▩▩▩▩▩▩▩▩\n";
 
 int Sign(int value) {
 	return (value > 0) - (value < 0);
@@ -100,11 +102,35 @@ public:
 		void Connect(Room& other) {
 			connectedRooms.push_back(&other);
 			other.connectedRooms.push_back(this);
+			for (Room* r : connectedRooms) {
+				if (find(r->connectedRooms.begin(), r->connectedRooms.end(), &other) != r->connectedRooms.end()) {
+					continue;
+				}
+				r->Connect(other);
+			}
+			for (Room* r : other.connectedRooms) {
+				if (find(r->connectedRooms.begin(), r->connectedRooms.end(), this) != r->connectedRooms.end()) {
+					continue;
+				}
+				r->Connect(*this);
+			}
+		}
+		bool IsConnectedWithMainRoom() {
+			if (isMainRoom) {
+				return true;
+			}
+			for (Room* r : connectedRooms) {
+				if (r == Map::GetInstance().mainRoom) {
+					return true;
+				}
+			}
+			return false;
 		}
 	};
 
 	Tile*** grid = new Tile * *[WIDTH];
 	vector<Room*>* rooms = nullptr;
+	Room* mainRoom = nullptr;
 
 	static Map& GetInstance() {
 		static Map _instance;
@@ -139,8 +165,8 @@ public:
 			}
 		}
 		rooms->at(biggestRoomIndex)->isMainRoom = true;
+		mainRoom = rooms->at(biggestRoomIndex);
 
-		//가장 가까운 방 서로 연결
 		ConnectClosestRooms(*rooms);
 		//메인룸 연결 안된 방 연결
 
@@ -393,6 +419,51 @@ public:
 			}
 		}
 	}
+
+	void ConnectMainRoom() {
+		for (int i = 0; i < rooms->size(); i++) {
+			Room* room = rooms->at(i);
+			if (room->IsConnectedWithMainRoom()) {
+				continue;
+			}
+			bool isThereConnectablePoint = false;
+			int minDistance = INT_MAX;
+			Tile* bestTile1 = nullptr;
+			Tile* bestTile2 = nullptr;
+			for (auto iter1 = room->edgeTiles.begin(); iter1 != room->edgeTiles.end(); iter1++) {
+				Tile* t1 = *iter1;
+				for (auto iter2 = mainRoom->edgeTiles.begin(); iter2 != mainRoom->edgeTiles.end(); iter2++) {
+					Tile* t2 = *iter2;
+					int distance = GetManhattanDistance(*t1->position, *t2->position);
+					if (distance < minDistance) {
+						isThereConnectablePoint = true;
+						minDistance = distance;
+						bestTile1 = t1;
+						bestTile2 = t2;
+					}
+				}
+			}
+			for (Room* r : room->connectedRooms) {
+				for (auto iter1 = r->edgeTiles.begin(); iter1 != r->edgeTiles.end(); iter1++) {
+					Tile* t1 = *iter1;
+					for (auto iter2 = mainRoom->edgeTiles.begin(); iter2 != mainRoom->edgeTiles.end(); iter2++) {
+						Tile* t2 = *iter2;
+						int distance = GetManhattanDistance(*t1->position, *t2->position);
+						if (distance < minDistance) {
+							isThereConnectablePoint = true;
+							minDistance = distance;
+							bestTile1 = t1;
+							bestTile2 = t2;
+						}
+					}
+				}
+			}
+			if (isThereConnectablePoint) {
+				MakePassage(bestTile1, bestTile2);
+				room->Connect(*mainRoom);
+			}
+		}
+	}
 };
 
 class StatModifier;
@@ -450,11 +521,8 @@ public:
 	int GetOrder() {
 		return (int)eType;
 	}
-	bool operator==(StatModifier& other) {
-		return (Name == other.Name && Setter == other.Setter);
-	}
-	bool operator==(StatModifier* other) {
-		return (Name == other->Name && Setter == other->Setter);
+	bool operator==(MapObject* setter) {
+		return Setter == setter;
 	}
 };
 
@@ -469,7 +537,7 @@ float Stat::GetValue() {
 				break;
 			case StatModifier::Type::BaseMult:
 			case StatModifier::Type::TotalMult:
-				nowValue *= (*iter).BaseMult;
+				nowValue *= (*iter).Value;
 				break;
 			}
 		}
@@ -493,17 +561,8 @@ void Stat::SetModifier(StatModifier mod) {
 }
 
 void Stat::RemoveModifiersBySetter(MapObject* setter) {
-	for (auto iter = modifiers.begin(); iter != modifiers.end(); iter++) {
-		if (iter->Setter == setter) {
-			auto tempIter = iter;
-			iter++;
-			modifiers.erase(tempIter);
-			if (iter != modifiers.begin()) {
-				iter--;
-			}
-			isDirty = true;
-		}
-	}
+	modifiers.erase(remove(modifiers.begin(), modifiers.end(), setter));
+	isDirty = true;
 }
 
 class Equippable;
@@ -531,7 +590,8 @@ public:
 		Equippable,
 		Consumable,
 		Enemy,
-		Player
+		Player,
+		Town
 	};
 protected:
 	string name;
@@ -558,19 +618,26 @@ public:
 		Stat::Type statType;
 		StatModifier::Type modType;
 		float value;
+		ItemOption(Stat::Type statType, StatModifier::Type modType, float value) : statType(statType), modType(modType), value(value) { }
 	};
 
 	ItemSlot::Type slotType;
 	vector<ItemOption> options;
+	int cost;
 
-	Equippable(const char* name, ItemSlot::Type slotType) : slotType(slotType) {
+	Equippable(const char* name, ItemSlot::Type slotType, int cost) : slotType(slotType), cost(cost) {
 		this->name = name;
 		eType = Type::Equippable;
+	}
+
+	void AddOption(ItemOption option) {
+		options.push_back(option);
 	}
 };
 
 class Consumable : public MapObject {
 public:
+
 
 };
 
@@ -586,8 +653,9 @@ public:
 	Stat stats[Stat::Type::__Count];
 	ItemSlot slots[ItemSlot::Type::__Count];
 	vector<MapObject*> inventory;
+	int gold;
 
-	Character(const char* name, float hp, float mp, float str, float intel, float def, float hppl = 0, float mppl = 0, float strpl = 0, float intpl = 0, float defpl = 0) : HP(hp), MP(mp) {
+	Character(const char* name, float hp, float mp, float str, float intel, float def, int gold = 0, float hppl = 0, float mppl = 0, float strpl = 0, float intpl = 0, float defpl = 0) : HP(hp), MP(mp), gold(gold) {
 		this->name = name;
 		stats[Stat::Type::MaxHP].BaseValue = hp;
 		stats[Stat::Type::MaxHP].ValuePerLevel = hppl;
@@ -617,7 +685,7 @@ public:
 		}
 	}
 
-	void healed(float heal) {
+	void Healed(float heal) {
 		HP = min(HP + heal, stats[Stat::Type::MaxHP].GetValue());
 	}
 
@@ -700,6 +768,13 @@ public:
 			stats[statType].RemoveModifiersBySetter(item);
 		}
 
+		if (HP > GetMaxHP()) {
+			HP = GetMaxHP();
+		}
+		if (MP > GetMaxMP()) {
+			MP = GetMaxMP();
+		}
+
 		inventory.push_back(item);
 		slots[type].equipped = nullptr;
 	}
@@ -715,6 +790,13 @@ public:
 			Equippable::ItemOption option = options[i];
 			StatModifier mod((item->GetName().c_str()), option.value, item, option.modType, option.statType);
 			stats[option.statType].SetModifier(mod);
+		}
+
+		if (HP > GetMaxHP()) {
+			HP = GetMaxHP();
+		}
+		if (MP > GetMaxMP()) {
+			MP = GetMaxMP();
 		}
 
 		slots[slotType].equipped = item;
@@ -748,7 +830,7 @@ public:
 class Player : public Character {
 	list<MapObject*> nearObjects;
 public:
-	Player(const char* name, float hp, float mp, float str, float intel, float def, float hppl, float mppl, float strpl, float intpl, float defpl) : Character(name, hp, mp, str, intel, def, hppl, mppl, strpl, intpl, defpl) {
+	Player(const char* name, float hp, float mp, float str, float intel, float def, int gold, float hppl, float mppl, float strpl, float intpl, float defpl) : Character(name, hp, mp, str, intel, def, gold, hppl, mppl, strpl, intpl, defpl) {
 		eType = Type::Player;
 	}
 
@@ -764,6 +846,33 @@ public:
 			}
 		}
 		return nearObjects;
+	}
+
+	void Buy(::Equippable* item) {
+		if (item->cost > gold) {
+			return;
+		}
+		else {
+			gold -= item->cost;
+			inventory.push_back(item);
+		}
+	}
+
+	void Sell(int i) {
+		if (i < 0 || i >= inventory.size()) {
+			return;
+		}
+		gold += ((::Equippable*)inventory[i])->cost;
+		auto iter = inventory.begin() + i;
+		inventory.erase(iter);
+	}
+};
+
+class Town : public MapObject {
+public:
+	Town(const char* name) {
+		this->name = name;
+		eType = Type::Town;
 	}
 };
 
@@ -924,10 +1033,12 @@ class GameManager {
 	string screenBuffer;
 
 public:
-	Player* player = new Player("플레이어", 100, 50, 20, 15, 5, 10, 10, 5, 5, 5);
+	Player* player = new Player("플레이어", 100, 50, 20, 15, 5, 1000, 10, 10, 5, 5, 5);
 	Character* enemy = nullptr;
 	Character* enemies[20];
-	MapObject* mapObjects[10];
+	MapObject* mapObjects[20];
+	Town* towns[3];
+	Town* town = nullptr;
 	bool IsGameOver = false;
 
 	static GameManager& GetInstance() {
@@ -949,8 +1060,43 @@ public:
 		}
 		Camera::GetInstance().rig.x = x <= 15 ? 16 : x >= WIDTH - 15 ? WIDTH - 15 : x;
 		Camera::GetInstance().rig.y = y <= 15 ? 16 : y >= HEIGHT - 15 ? HEIGHT - 15 : y;
+
+		towns[0] = new Town("개구리 마을");
+		bool isThereTown = false;
+		for (int i = x - 1; i <= x + 1; i++) {
+			for (int j = y - 1; j <= y + 1; j++) {
+				if (Map::GetInstance().grid[i][j]->IsAvailable()) {
+					towns[0]->SetPosition(i, j);
+					Map::GetInstance().grid[i][j]->occupier = towns[0];
+					isThereTown = true;
+					break;
+				}
+			}
+			if (isThereTown) break;
+		}
+		towns[1] = new Town("뉴욕");
+		while (true) {
+			x = rand() % WIDTH;
+			y = rand() % HEIGHT;
+			if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+				towns[1]->SetPosition(x, y);
+				Map::GetInstance().grid[x][y]->occupier = towns[1];
+				break;
+			}
+		}
+		towns[2] = new Town("행복 마을");
+		while (true) {
+			x = rand() % WIDTH;
+			y = rand() % HEIGHT;
+			if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+				towns[2]->SetPosition(x, y);
+				Map::GetInstance().grid[x][y]->occupier = towns[2];
+				break;
+			}
+		}
+
 		for (int i = 0; i < ENEMY_COUNT / 2; i++) {
-			enemies[i] = new Character("슬라임", 30, 0, 5, 0, 1);
+			enemies[i] = new Character("슬라임", 30, 0, 5, 0, 1, 30);
 			while (true) {
 				x = rand() % WIDTH;
 				y = rand() % HEIGHT;
@@ -962,7 +1108,7 @@ public:
 			}
 		}
 		for (int i = ENEMY_COUNT / 2; i < ENEMY_COUNT - 1; i++) {
-			enemies[i] = new Character("스켈레톤", 60, 0, 15, 0, 4);
+			enemies[i] = new Character("스켈레톤", 60, 0, 15, 0, 4, 70);
 			while (true) {
 				x = rand() % WIDTH;
 				y = rand() % HEIGHT;
@@ -974,7 +1120,7 @@ public:
 			}
 		}
 		for (int i = ENEMY_COUNT - 1; i < ENEMY_COUNT; i++) {
-			enemies[i] = new Character("마왕", 100, 0, 20, 0, 10);
+			enemies[i] = new Character("마왕", 1000, 0, 50, 0, 18);
 			while (true) {
 				x = rand() % WIDTH;
 				y = rand() % HEIGHT;
@@ -986,9 +1132,111 @@ public:
 			}
 		}
 
-		for (int i = 0; i < MAP_OBJECT_COUNT; i++) {
-			//TODO: 아이템 성능 추가하고 생성자 변경.
-			mapObjects[i] = new Equippable("대검", ItemSlot::Type::Weapon);
+		for (int i = 0; i < 2; i++) {
+			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::BaseFlat, 10);
+			Equippable* e = new Equippable("대검", ItemSlot::Type::Weapon, 100);
+			e->AddOption(option);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 2; i < 5; i++) {
+			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::BaseFlat, 3);
+			Equippable* e = new Equippable("나무 갑옷", ItemSlot::Type::Body, 50);
+			e->AddOption(option);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 5; i < 7; i++) {
+			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::TotalMult, 1.6);
+			Equippable* e = new Equippable("힘의 장갑", ItemSlot::Type::Arm, 30);
+			e->AddOption(option);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 7; i < 10; i++) {
+			Equippable::ItemOption option1 = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::BaseMult, 2);
+			Equippable::ItemOption option2 = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::BaseMult, 0.5);
+			Equippable* e = new Equippable("광전사의 투구", ItemSlot::Type::Head, 100);
+			e->AddOption(option1);
+			e->AddOption(option2);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 10; i < 15; i++) {
+			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::TotalMult, 1.8);
+			Equippable* e = new Equippable("강철 장화", ItemSlot::Type::Leg, 20);
+			e->AddOption(option);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 15; i < 17; i++) {
+			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::TotalFlat, 5);
+			Equippable* e = new Equippable("나무 방패", ItemSlot::Type::Sub, 30);
+			e->AddOption(option);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 17; i < 20; i++) {
+			Equippable::ItemOption option1 = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::BaseFlat, 6);
+			Equippable::ItemOption option2 = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::BaseFlat, 6);
+			Equippable* e = new Equippable("쌍절곤", ItemSlot::Type::Weapon, 20);
+			e->AddOption(option1);
+			e->AddOption(option2);
+			mapObjects[i] = e;
 			while (true) {
 				x = rand() % WIDTH;
 				y = rand() % HEIGHT;
@@ -1060,7 +1308,19 @@ public:
 	static void Moving(InputManager::Direction d);
 	static void Check();
 	static void UseItem(int i) {
-		GameManager::GetInstance().player->UseItem(i);
+		Player* player = GameManager::GetInstance().player;
+		if (player->inventory.size() > 8 && i == 9) {
+			if (player->inventory.size() > 8) {
+				for (int i = 0; i < 8; i++) {
+					MapObject* item = player->inventory.back();
+					player->inventory.insert(player->inventory.begin(), item);
+					player->inventory.pop_back();
+				}
+			}
+		}
+		else if (i > 0 || i < 8) {
+			GameManager::GetInstance().player->UseItem(i);
+		}
 	}
 };
 
@@ -1144,6 +1404,80 @@ public:
 	}
 };
 
+class TownState : public State {
+protected:
+	void AddListener() {
+		InputManager::GetInstance().SetMoveEvent(NoAction);
+		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NumberEvent);
+	}
+public:
+	TownState() {
+		name = "TownState";
+	}
+	static void NoAction(InputManager::Direction d) {
+
+	}
+	static void OK();
+	static void NumberEvent(int i);
+};
+
+class BuyingState : public State {
+protected:
+	void AddListener() {
+		InputManager::GetInstance().SetMoveEvent(NoAction);
+		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NumberEvent);
+	}
+public:
+	BuyingState() {
+		name = "BuyingState";
+	}
+	static void NoAction(InputManager::Direction d) {
+
+	}
+	static void OK();
+	static void NumberEvent(int i);
+};
+
+class SellingState : public State {
+protected:
+	void AddListener() {
+		InputManager::GetInstance().SetMoveEvent(NoAction);
+		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NumberEvent);
+	}
+public:
+	SellingState() {
+		name = "SellingState";
+	}
+	static void NoAction(InputManager::Direction d) {
+
+	}
+	static void OK();
+	static void NumberEvent(int i);
+};
+
+class WinState : public State {
+protected:
+	void AddListener() {
+		InputManager::GetInstance().SetMoveEvent(NoAction);
+		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NoAction);
+	}
+public:
+	WinState() {
+		name = "WinState";
+	}
+	static void NoAction(InputManager::Direction d) {
+
+	}
+	static void OK() {
+		GameManager::GetInstance().IsGameOver = true;
+	}
+	static void NoAction(int i);
+};
+
 class StateMachine {
 	StateMachine() {
 		State* es = new ExploreState;
@@ -1212,6 +1546,27 @@ string Camera::DrawScreen() {
 					else if (occupierName == "대검") {
 						screen += "†";
 					}
+					else if (occupierName == "나무 갑옷") {
+						screen += "♧";
+					}
+					else if (occupierName == "힘의 장갑") {
+						screen += "＊";
+					}
+					else if (occupierName == "광전사의 투구") {
+						screen += "◇";
+					}
+					else if (occupierName == "강철 장화") {
+						screen += "↔";
+					}
+					else if (occupierName == "나무 방패") {
+						screen += "®";
+					}
+					else if (occupierName == "쌍절곤") {
+						screen += "‡";
+					}
+					else {
+						screen += "◎";
+					}
 				}
 				else {
 					switch (Map::GetInstance().grid[x][y]->eType) {
@@ -1240,27 +1595,31 @@ string Camera::DrawScreen() {
 		screen += " STR: " + to_string((int)p->GetSTR());
 		screen += " INT: " + to_string((int)p->GetINT());
 		screen += " DEF: " + to_string((int)p->GetDEF());
+		screen += " [Gold]: " + to_string(p->gold) + "G";
 		screen += "\n";
-		
+
 		screen += "[장비]";
-		screen += " 머리 : ";
-		screen += p->slots[ItemSlot::Type::Head].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Head].equipped->GetName();
-		screen += " 몸 : ";
-		screen += p->slots[ItemSlot::Type::Body].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Body].equipped->GetName();
-		screen += " 팔 : ";
-		screen += p->slots[ItemSlot::Type::Arm].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Arm].equipped->GetName();
-		screen += " 다리 : ";
-		screen += p->slots[ItemSlot::Type::Leg].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Leg].equipped->GetName();
 		screen += " 무기 : ";
 		screen += p->slots[ItemSlot::Type::Weapon].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Weapon].equipped->GetName();
-		screen += " 보조장비 : ";
+		screen += " / 보조장비 : ";
 		screen += p->slots[ItemSlot::Type::Sub].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Sub].equipped->GetName();
+		screen += " / 머리 : ";
+		screen += p->slots[ItemSlot::Type::Head].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Head].equipped->GetName();
+		screen += " / 몸 : ";
+		screen += p->slots[ItemSlot::Type::Body].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Body].equipped->GetName();
+		screen += " / 팔 : ";
+		screen += p->slots[ItemSlot::Type::Arm].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Arm].equipped->GetName();
+		screen += " / 다리 : ";
+		screen += p->slots[ItemSlot::Type::Leg].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Leg].equipped->GetName();
 		screen += "\n";
-		
+
 		screen += "[인벤토리] ";
 		screen += "\n";
-		for (int i = 0; i < p->inventory.size(); i++) {
-			screen += to_string(i) + " : " + p->inventory[i]->GetName() + " ";
+		for (int i = 0; i < min(p->inventory.size(), 8); i++) {
+			screen += "(" + to_string(i) + ") : " + p->inventory[i]->GetName() + " ";
+		}
+		if (p->inventory.size() > 8) {
+			screen += "(9) : >>다음 아이템>>";
 		}
 		screen += "\n";
 		screen += "[인접한 것] ";
@@ -1322,6 +1681,56 @@ string Camera::DrawScreen() {
 		screen += "================================\n";
 		screen += "================================\n";
 		screen += "================================\n";
+	}
+	else if (nowState == "TownState") {
+		Town* t = GameManager::GetInstance().town;
+		screen.clear();
+		screen = town;
+
+		screen += "\n";
+		screen += "~~~~";
+		screen += t->GetName();
+		screen += "에 오신 것을 환영합니다~~~~";
+		screen += "\n";
+		screen += "SpaceBar: 나가기 / (1): 구매 / (2): 판매";
+	}
+	else if (nowState == "BuyingState") {
+		Player* p = GameManager::GetInstance().player;
+		screen.clear();
+		screen = town;
+
+		screen += "\n";
+		screen += "Gold: " + to_string(p->gold) + "G";
+		screen += "\n";
+		screen += "(1) : 광선검(1000G) / (2) : 최고급 투구(500G) / (3) : 황금 장화(300G)";
+		screen += "\n";
+		screen += "SpaceBar: 돌아가기";
+	}
+	else if (nowState == "SellingState") {
+		Player* p = GameManager::GetInstance().player;
+		screen.clear();
+		screen = town;
+
+		screen += "\n";
+		screen += "Gold: " + to_string(p->gold) + "G";
+		screen += "\n";
+
+		screen += "[판매] ";
+		screen += "\n";
+		for (int i = 0; i < min(p->inventory.size(), 8); i++) {
+			screen += "(" + to_string(i) + ") : " + p->inventory[i]->GetName() + " ";
+		}
+		if (p->inventory.size() > 8) {
+			screen += "(9) : >>다음 아이템>>";
+		}
+		screen += "\n";
+		screen += "SpaceBar: 돌아가기";
+	}
+	else if (nowState == "WinState") {
+		screen.clear();
+		screen += "마왕을 처치해서 세상은 평화로워졌다.\n";
+		screen += "만세 만세 만만세\n";
+		screen += "~~끝~~\n";
 	}
 	return screen;
 }
@@ -1398,7 +1807,12 @@ void ExploreState::Check() {
 		item->SetPosition(-1, -1);
 		Map::GetInstance().grid[x][y]->occupier = nullptr;
 	}
-
+	else if (nearObjects.front()->GetType() == MapObject::Type::Town) {
+		Town* town = (Town*)nearObjects.front();
+		GameManager::GetInstance().town = town;
+		State* ts = new TownState;
+		StateMachine::GetInstance().Transition(*ts);
+	}
 }
 
 void BattleState::SpaceBarEvent() {
@@ -1414,16 +1828,21 @@ void AttackingState::OK() {
 	Player* player = GameManager::GetInstance().player;
 	Character* enemy = GameManager::GetInstance().enemy;
 	if (enemy->IsDead()) {
-		player->GainEXP(enemy->GetMaxHP());
-		int x = enemy->GetPosition().x;
-		int y = enemy->GetPosition().y;
-		Map::GetInstance().grid[x][y]->occupier = nullptr;
-		enemy = nullptr;
-		delete GameManager::GetInstance().enemy;
-		GameManager::GetInstance().enemy = nullptr;
+		if (enemy->GetName() == "마왕") {
 
-		State* es = new ExploreState;
-		StateMachine::GetInstance().Transition(*es);
+		}
+		else {
+			player->GainEXP((int)enemy->GetMaxHP());
+			int x = enemy->GetPosition().x;
+			int y = enemy->GetPosition().y;
+			Map::GetInstance().grid[x][y]->occupier = nullptr;
+			enemy = nullptr;
+			delete GameManager::GetInstance().enemy;
+			GameManager::GetInstance().enemy = nullptr;
+
+			State* es = new ExploreState;
+			StateMachine::GetInstance().Transition(*es);
+		}
 	}
 	else {
 		enemy->Attack(*player);
@@ -1448,6 +1867,75 @@ void DefensingState::OK() {
 void GameOverState::OK() {
 	GameManager::GetInstance().IsGameOver = true;
 }
+
+void TownState::OK() {
+	GameManager::GetInstance().town = nullptr;
+	State* es = new ExploreState;
+	StateMachine::GetInstance().Transition(*es);
+}
+
+void TownState::NumberEvent(int i) {
+	if (i == 1) {
+		State* bs = new BuyingState;
+		StateMachine::GetInstance().Transition(*bs);
+	}
+	else if (i == 2) {
+		State* ss = new SellingState;
+		StateMachine::GetInstance().Transition(*ss);
+	}
+}
+
+void BuyingState::OK() {
+	State* ts = new TownState;
+	StateMachine::GetInstance().Transition(*ts);
+}
+
+void SellingState::OK() {
+	State* ts = new TownState;
+	StateMachine::GetInstance().Transition(*ts);
+}
+
+void BuyingState::NumberEvent(int i) {
+	Player* player = GameManager::GetInstance().player;
+	if (i == 1) {
+		Equippable::ItemOption option1 = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::BaseFlat, 10);
+		Equippable::ItemOption option2 = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::TotalMult, 2);
+		Equippable* e = new Equippable("광선검", ItemSlot::Type::Weapon, 1000);
+		e->AddOption(option1);
+		e->AddOption(option2);
+		player->Buy(e);
+	}
+	else if (i == 2) {
+		Equippable::ItemOption option1 = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::BaseFlat, 10);
+		Equippable::ItemOption option2 = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::TotalFlat, 20);
+		Equippable* e = new Equippable("최고급 투구", ItemSlot::Type::Head, 500);
+		e->AddOption(option1);
+		e->AddOption(option2);
+		player->Buy(e);
+	}
+	else if (i == 3) {
+		Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::TotalMult, 2.5);
+		Equippable* e = new Equippable("황금 장화", ItemSlot::Type::Leg, 300);
+		e->AddOption(option);
+		player->Buy(e);
+	}
+}
+
+
+void SellingState::NumberEvent(int i) {
+	Player* player = GameManager::GetInstance().player;
+	if (player->inventory.size() > 8 && i == 9) {
+		for (int i = 0; i < 8; i++) {
+			MapObject* item = player->inventory.back();
+			player->inventory.insert(player->inventory.begin(), item);
+			player->inventory.pop_back();
+		}
+	}
+	else if (i > 0 || i < 8) {
+		player->Sell(i);
+	}
+}
+
 
 int main() {
 	GameManager::GetInstance().InitGame();
