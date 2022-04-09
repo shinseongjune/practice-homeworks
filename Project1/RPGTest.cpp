@@ -588,7 +588,9 @@ class MapObject {
 public:
 	enum Type {
 		Equippable,
-		Consumable,
+		HPPotion,
+		MPPotion,
+		Thrower,
 		Enemy,
 		Player,
 		Town
@@ -637,7 +639,13 @@ public:
 
 class Consumable : public MapObject {
 public:
+	int value;
+	int cost;
 
+	Consumable(const char* name, Type type, int value, int cost) : value(value), cost(cost) {
+		this->name = name;
+		eType = type;
+	}
 
 };
 
@@ -821,9 +829,20 @@ public:
 		}
 		if (inventory[i]->GetType() == MapObject::Type::Equippable) {
 			Equip((::Equippable*)inventory[i]);
-			return;
 		}
-
+		else if (inventory[i]->GetType() == MapObject::Type::HPPotion) {
+			Consumable* item = (Consumable*)inventory[i];
+			Healed(item->value);
+			RemoveItem(item);
+		}
+		else if (inventory[i]->GetType() == MapObject::Type::HPPotion) {
+			Consumable* item = (Consumable*)inventory[i];
+			MP += item->value;
+			if (MP > GetMaxMP()) {
+				MP = GetMaxMP();
+			}
+			RemoveItem(item);
+		}
 	}
 };
 
@@ -862,9 +881,18 @@ public:
 		if (i < 0 || i >= inventory.size()) {
 			return;
 		}
-		gold += ((::Equippable*)inventory[i])->cost;
+		if (inventory[i]->GetType() == MapObject::Type::Equippable) {
+			gold += ((::Equippable*)inventory[i])->cost;
+		}
+		else {
+			gold += ((::Consumable*)inventory[i])->cost;
+		}
 		auto iter = inventory.begin() + i;
 		inventory.erase(iter);
+	}
+
+	void GainGold(int gold) {
+		this->gold += gold;
 	}
 };
 
@@ -1120,7 +1148,7 @@ public:
 			}
 		}
 		for (int i = ENEMY_COUNT - 1; i < ENEMY_COUNT; i++) {
-			enemies[i] = new Character("마왕", 1000, 0, 50, 0, 18);
+			enemies[i] = new Character("마왕", 800, 0, 40, 0, 18);
 			while (true) {
 				x = rand() % WIDTH;
 				y = rand() % HEIGHT;
@@ -1132,7 +1160,7 @@ public:
 			}
 		}
 
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < 1; i++) {
 			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::BaseFlat, 10);
 			Equippable* e = new Equippable("대검", ItemSlot::Type::Weapon, 100);
 			e->AddOption(option);
@@ -1148,10 +1176,38 @@ public:
 			}
 		}
 
-		for (int i = 2; i < 5; i++) {
+		for (int i = 1; i < 3; i++) {
 			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::BaseFlat, 3);
 			Equippable* e = new Equippable("나무 갑옷", ItemSlot::Type::Body, 50);
 			e->AddOption(option);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 3; i < 4; i++) {
+			Consumable* e = new Consumable("HP포션", MapObject::Type::HPPotion, 30, 150);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 3; i < 4; i++) {
+			Consumable* e = new Consumable("MP포션", MapObject::Type::MPPotion, 10, 150);
 			mapObjects[i] = e;
 			while (true) {
 				x = rand() % WIDTH;
@@ -1198,7 +1254,7 @@ public:
 			}
 		}
 
-		for (int i = 10; i < 15; i++) {
+		for (int i = 10; i < 12; i++) {
 			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::TotalMult, 1.8);
 			Equippable* e = new Equippable("강철 장화", ItemSlot::Type::Leg, 20);
 			e->AddOption(option);
@@ -1214,7 +1270,35 @@ public:
 			}
 		}
 
-		for (int i = 15; i < 17; i++) {
+		for (int i = 12; i < 14; i++) {
+			Consumable* e = new Consumable("짱돌", MapObject::Type::Thrower, 30, 60);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 14; i < 17; i++) {
+			Consumable* e = new Consumable("폭탄", MapObject::Type::Thrower, 70, 100);
+			mapObjects[i] = e;
+			while (true) {
+				x = rand() % WIDTH;
+				y = rand() % HEIGHT;
+				if (Map::GetInstance().grid[x][y]->IsAvailable()) {
+					mapObjects[i]->SetPosition(x, y);
+					Map::GetInstance().grid[x][y]->occupier = mapObjects[i];
+					break;
+				}
+			}
+		}
+
+		for (int i = 17; i < 19; i++) {
 			Equippable::ItemOption option = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::TotalFlat, 5);
 			Equippable* e = new Equippable("나무 방패", ItemSlot::Type::Sub, 30);
 			e->AddOption(option);
@@ -1230,7 +1314,7 @@ public:
 			}
 		}
 
-		for (int i = 17; i < 20; i++) {
+		for (int i = 19; i < 20; i++) {
 			Equippable::ItemOption option1 = Equippable::ItemOption(Stat::Type::Strength, StatModifier::Type::BaseFlat, 6);
 			Equippable::ItemOption option2 = Equippable::ItemOption(Stat::Type::Defense, StatModifier::Type::BaseFlat, 6);
 			Equippable* e = new Equippable("쌍절곤", ItemSlot::Type::Weapon, 20);
@@ -1309,6 +1393,12 @@ public:
 	static void Check();
 	static void UseItem(int i) {
 		Player* player = GameManager::GetInstance().player;
+		if (i == 8) {
+			for (int i = 0; i < ItemSlot::Type::__Count; i++) {
+				player->Unequip((ItemSlot::Type)i);
+			}
+			return;
+		}
 		if (player->inventory.size() > 8 && i == 9) {
 			if (player->inventory.size() > 8) {
 				for (int i = 0; i < 8; i++) {
@@ -1339,9 +1429,7 @@ public:
 
 	}
 	static void SpaceBarEvent();
-	static void NumberEvent(int i) {
-
-	}
+	static void NumberEvent(int i);
 };
 
 class AttackingState : public State {
@@ -1475,7 +1563,29 @@ public:
 	static void OK() {
 		GameManager::GetInstance().IsGameOver = true;
 	}
-	static void NoAction(int i);
+	static void NoAction(int i) {
+
+	}
+};
+
+class ThrowingState : public State {
+protected:
+	void AddListener() {
+		InputManager::GetInstance().SetMoveEvent(NoAction);
+		InputManager::GetInstance().SetSpacebarEvent(OK);
+		InputManager::GetInstance().SetNumberEvent(NoAction);
+	}
+public:
+	ThrowingState() {
+		name = "ThrowingState";
+	}
+	static void NoAction(InputManager::Direction d) {
+
+	}
+	static void OK();
+	static void NoAction(int i) {
+
+	}
 };
 
 class StateMachine {
@@ -1564,6 +1674,18 @@ string Camera::DrawScreen() {
 					else if (occupierName == "쌍절곤") {
 						screen += "‡";
 					}
+					else if (occupierName == "짱돌") {
+						screen += "▣";
+					}
+					else if (occupierName == "폭탄") {
+						screen += "♨";
+					}
+					else if (occupierName == "HP포션") {
+						screen += "△";
+					}
+					else if (occupierName == "MP포션") {
+						screen += "▽";
+					}
 					else {
 						screen += "◎";
 					}
@@ -1613,6 +1735,9 @@ string Camera::DrawScreen() {
 		screen += p->slots[ItemSlot::Type::Leg].equipped == nullptr ? "없음" : p->slots[ItemSlot::Type::Leg].equipped->GetName();
 		screen += "\n";
 
+		screen += "(8) : 모든 장비 해제";
+		screen += "\n";
+
 		screen += "[인벤토리] ";
 		screen += "\n";
 		for (int i = 0; i < min(p->inventory.size(), 8); i++) {
@@ -1629,6 +1754,7 @@ string Camera::DrawScreen() {
 		}
 	}
 	else if (nowState == "BattleState") {
+		Player* player = GameManager::GetInstance().player;
 		Character* enemy = GameManager::GetInstance().enemy;
 		string enemyName = enemy->GetName();
 		DrawMonster(enemyName);
@@ -1637,6 +1763,26 @@ string Camera::DrawScreen() {
 		screen += "[" + enemyName + "] HP: " + to_string((int)enemy->GetHP()) + "/" + to_string((int)enemy->GetMaxHP());
 		screen += "\n";
 		screen += "SpaceBar: 공격";
+		screen += "\n";
+
+		bool isThereStone = false;
+		bool isThereBomb = false;
+		for (auto iter = player->inventory.begin(); iter != player->inventory.end(); iter++) {
+			if ((*iter)->GetType() == MapObject::Type::Thrower) {
+				if ((*iter)->GetName() == "짱돌") {
+					isThereStone = true;
+				}
+				else if ((*iter)->GetName() == "폭탄") {
+					isThereBomb = true;
+				}
+			}
+		}
+		if (isThereStone) {
+			screen += "(0) : 짱돌 ";
+		}
+		if (isThereBomb) {
+			screen += "(1) : 폭탄 ";
+		}
 	}
 	else if (nowState == "AttackingState") {
 		Player* player = GameManager::GetInstance().player;
@@ -1732,6 +1878,22 @@ string Camera::DrawScreen() {
 		screen += "만세 만세 만만세\n";
 		screen += "~~끝~~\n";
 	}
+	else if (nowState == "ThrowingState") {
+		Player* player = GameManager::GetInstance().player;
+		Character* enemy = GameManager::GetInstance().enemy;
+		string enemyName = enemy->GetName();
+		DrawMonster(enemyName);
+
+		screen += "\n";
+		screen += enemyName + "에게 아이템을 던졌다!";
+		screen += "\n";
+		screen += enemyName + "의 HP가 " + to_string((int)enemy->GetHP()) + "이(가) 되었다.";
+		screen += "\n";
+		if (enemy->IsDead()) {
+			screen += enemyName + "이(가) 쓰러졌다!\n";
+		}
+		screen += "SpaceBar: 확인";
+	}
 	return screen;
 }
 
@@ -1798,7 +1960,7 @@ void ExploreState::Check() {
 		State* bs = new BattleState;
 		StateMachine::GetInstance().Transition(*bs);
 	}
-	else if (nearObjects.front()->GetType() == MapObject::Type::Equippable || nearObjects.front()->GetType() == MapObject::Type::Consumable) {
+	else if (nearObjects.front()->GetType() == MapObject::Type::Equippable || nearObjects.front()->GetType() == MapObject::Type::HPPotion || nearObjects.front()->GetType() == MapObject::Type::MPPotion || nearObjects.front()->GetType() == MapObject::Type::Thrower) {
 		MapObject* item = nearObjects.front();
 		GameManager::GetInstance().player->GetItem(item);
 
@@ -1824,15 +1986,58 @@ void BattleState::SpaceBarEvent() {
 	StateMachine::GetInstance().Transition(*as);
 }
 
+void BattleState::NumberEvent(int i) {
+	if (i == 0) {
+		Player* player = GameManager::GetInstance().player;
+		Consumable* item = nullptr;
+		bool isThereThrower = false;
+		for (auto iter = player->inventory.begin(); iter != player->inventory.end(); iter++) {
+			if ((*iter)->GetName() == "짱돌") {
+				item = (Consumable*)*iter;
+				GameManager::GetInstance().enemy->Damaged(item->value);
+				player->RemoveItem(item);
+				delete item;
+				isThereThrower = true;
+				break;
+			}
+		}
+		if (isThereThrower) {
+			State* ts = new ThrowingState;
+			StateMachine::GetInstance().Transition(*ts);
+		}
+	}
+	else if (i == 1) {
+		Player* player = GameManager::GetInstance().player;
+		Consumable* item = nullptr;
+		bool isThereThrower = false;
+		for (auto iter = player->inventory.begin(); iter != player->inventory.end(); iter++) {
+			if ((*iter)->GetName() == "폭탄") {
+				item = (Consumable*)*iter;
+				GameManager::GetInstance().enemy->Damaged(item->value);
+				player->RemoveItem(item);
+				delete item;
+				isThereThrower = true;
+				break;
+			}
+		}
+		if (isThereThrower) {
+			State* ts = new ThrowingState;
+			StateMachine::GetInstance().Transition(*ts);
+		}
+	}
+}
+
 void AttackingState::OK() {
 	Player* player = GameManager::GetInstance().player;
 	Character* enemy = GameManager::GetInstance().enemy;
 	if (enemy->IsDead()) {
 		if (enemy->GetName() == "마왕") {
-
+			State* ws = new WinState;
+			StateMachine::GetInstance().Transition(*ws);
 		}
 		else {
 			player->GainEXP((int)enemy->GetMaxHP());
+			player->GainGold((int)enemy->gold);
 			int x = enemy->GetPosition().x;
 			int y = enemy->GetPosition().y;
 			Map::GetInstance().grid[x][y]->occupier = nullptr;
@@ -1936,6 +2141,32 @@ void SellingState::NumberEvent(int i) {
 	}
 }
 
+void ThrowingState::OK() {
+	Player* player = GameManager::GetInstance().player;
+	Character* enemy = GameManager::GetInstance().enemy;
+	if (GameManager::GetInstance().enemy->IsDead()) {
+		if (enemy->GetName() == "마왕") {
+			State* ws = new WinState;
+			StateMachine::GetInstance().Transition(*ws);
+		}
+		else {
+			player->GainEXP((int)enemy->GetMaxHP());
+			int x = enemy->GetPosition().x;
+			int y = enemy->GetPosition().y;
+			Map::GetInstance().grid[x][y]->occupier = nullptr;
+			enemy = nullptr;
+			delete GameManager::GetInstance().enemy;
+			GameManager::GetInstance().enemy = nullptr;
+
+			State* es = new ExploreState;
+			StateMachine::GetInstance().Transition(*es);
+		}
+	}
+	else {
+		State* ds = new DefensingState;
+		StateMachine::GetInstance().Transition(*ds);
+	}
+}
 
 int main() {
 	GameManager::GetInstance().InitGame();
@@ -1943,7 +2174,5 @@ int main() {
 
 	return 0;
 }
-
-
 
 
