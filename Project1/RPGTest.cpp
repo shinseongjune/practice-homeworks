@@ -120,7 +120,7 @@ public:
 				return true;
 			}
 			for (Room* r : connectedRooms) {
-				if (r == Map::GetInstance().mainRoom) {
+				if (r->isMainRoom) {
 					return true;
 				}
 			}
@@ -168,9 +168,7 @@ public:
 		mainRoom = rooms->at(biggestRoomIndex);
 
 		ConnectClosestRooms(*rooms);
-		//메인룸 연결 안된 방 연결
-
-
+		ConnectMainRoom();
 	}
 
 	void MakeNoise() {
@@ -426,10 +424,12 @@ public:
 			if (room->IsConnectedWithMainRoom()) {
 				continue;
 			}
+
 			bool isThereConnectablePoint = false;
 			int minDistance = INT_MAX;
 			Tile* bestTile1 = nullptr;
 			Tile* bestTile2 = nullptr;
+
 			for (auto iter1 = room->edgeTiles.begin(); iter1 != room->edgeTiles.end(); iter1++) {
 				Tile* t1 = *iter1;
 				for (auto iter2 = mainRoom->edgeTiles.begin(); iter2 != mainRoom->edgeTiles.end(); iter2++) {
@@ -561,7 +561,10 @@ void Stat::SetModifier(StatModifier mod) {
 }
 
 void Stat::RemoveModifiersBySetter(MapObject* setter) {
-	modifiers.erase(remove(modifiers.begin(), modifiers.end(), setter));
+	auto iter = remove_if(modifiers.begin(), modifiers.end(), [=](StatModifier mod) {
+		return mod == setter;
+		});
+	modifiers.erase(iter, modifiers.end());
 	isDirty = true;
 }
 
@@ -709,8 +712,22 @@ public:
 		return HP;
 	}
 
+	void SetHP(float hp) {
+		HP = hp;
+		if (HP > GetMaxHP()) {
+			HP = GetMaxHP();
+		}
+	}
+
 	float GetMP() {
 		return MP;
+	}
+
+	void SetMP(float mp) {
+		MP = mp;
+		if (MP > GetMaxMP()) {
+			MP = GetMaxMP();
+		}
 	}
 
 	float GetMaxHP() {
@@ -835,7 +852,7 @@ public:
 			Healed(item->value);
 			RemoveItem(item);
 		}
-		else if (inventory[i]->GetType() == MapObject::Type::HPPotion) {
+		else if (inventory[i]->GetType() == MapObject::Type::MPPotion) {
 			Consumable* item = (Consumable*)inventory[i];
 			MP += item->value;
 			if (MP > GetMaxMP()) {
@@ -1408,7 +1425,7 @@ public:
 				}
 			}
 		}
-		else if (i > 0 || i < 8) {
+		else if (i >= 0 || i < 8) {
 			GameManager::GetInstance().player->UseItem(i);
 		}
 	}
@@ -1874,9 +1891,11 @@ string Camera::DrawScreen() {
 	}
 	else if (nowState == "WinState") {
 		screen.clear();
+		screen += "====================================\n";
 		screen += "마왕을 처치해서 세상은 평화로워졌다.\n";
-		screen += "만세 만세 만만세\n";
-		screen += "~~끝~~\n";
+		screen += "~~~~~~~~~만세 만세 만만세!!~~~~~~~~~\n";
+		screen += "~~~~~~~~~~~~~~~~끝~~~~~~~~~~~~~~~~~~\n";
+		screen += "====================================\n";
 	}
 	else if (nowState == "ThrowingState") {
 		Player* player = GameManager::GetInstance().player;
@@ -1970,6 +1989,9 @@ void ExploreState::Check() {
 		Map::GetInstance().grid[x][y]->occupier = nullptr;
 	}
 	else if (nearObjects.front()->GetType() == MapObject::Type::Town) {
+		Player* player = GameManager::GetInstance().player;
+		player->SetHP(player->GetMaxHP());
+		player->SetMP(player->GetMaxMP());
 		Town* town = (Town*)nearObjects.front();
 		GameManager::GetInstance().town = town;
 		State* ts = new TownState;
@@ -2151,6 +2173,7 @@ void ThrowingState::OK() {
 		}
 		else {
 			player->GainEXP((int)enemy->GetMaxHP());
+			player->GainGold((int)enemy->gold);
 			int x = enemy->GetPosition().x;
 			int y = enemy->GetPosition().y;
 			Map::GetInstance().grid[x][y]->occupier = nullptr;
